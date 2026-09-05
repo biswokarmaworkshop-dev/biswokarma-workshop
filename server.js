@@ -325,6 +325,16 @@ const server = http.createServer((request, response) => {
           process.env.NODE_ENV === "development" ? error.message : undefined,
       }),
     );
+  /* ---- Google Search Console verification ---- */
+  const googleVerify = url.pathname.match(/^\/(google[0-9a-f]+\.html)$/);
+  if (googleVerify && request.method === "GET") {
+    const filePath = path.join(__dirname, googleVerify[1]);
+    return fs.readFile(filePath, (error, content) => {
+      if (error) return json(response, 404, { error: "Verification file not found" });
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(content);
+    });
+  }
   if (url.pathname === "/robots.txt") {
     const robotsContent = `User-agent: *
 Allow: /
