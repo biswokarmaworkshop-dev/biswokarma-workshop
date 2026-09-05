@@ -1,0 +1,15 @@
+{
+  "name": "biswokarma-workshop",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  }
+}
