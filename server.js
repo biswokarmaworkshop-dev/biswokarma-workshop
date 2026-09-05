@@ -270,6 +270,27 @@ const server = http.createServer((request, response) => {
           process.env.NODE_ENV === "development" ? error.message : undefined,
       }),
     );
+  if (url.pathname === "/robots.txt") {
+    const robotsContent = `User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://biswokarma-workshop-1.onrender.com/sitemap.xml`;
+    response.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+    return response.end(robotsContent);
+  }
+  if (url.pathname === "/sitemap.xml") {
+    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://biswokarma-workshop-1.onrender.com/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`;
+    response.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
+    return response.end(sitemapContent);
+  }
   if (url.pathname.startsWith("/vendor/")) {
     const requestedFile = path.resolve(
       vendorDirectory,
