@@ -4,6 +4,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
+const https = require("https");
 
 const port = process.env.PORT || 3000;
 const htmlFile = path.join(__dirname, "biswokarma-workshop (1).html");
@@ -192,44 +193,107 @@ async function api(request, response, url) {
       client.release();
     }
   }
-  if (url.pathname === "/api/payments/providers" && request.method === "GET") {
-    return json(response, 200, { providers: gatewayConfig });
+  /* ---- eSewa signature verification ---- */
+  function esewaVerify(transactionRef, amount, secretKey) {
+    return new Promise((resolve, reject) => {
+      const msg = `total_amount=${amount},transaction_uuid=${transactionRef},product_code=${process.env.ESEWA_MERCHANT_CODE}`;
+      const signature = crypto.createHmac("sha256", secretKey).update(msg).digest("hex");
+      const params = new URLSearchParams({
+        amt: amount,
+        rid: transactionRef,
+        refId: transactionRef,
+        scd: process.env.ESEWA_MERCHANT_CODE,
+        sig: signature,
+      });
+      const options = {
+        hostname: "esewa.com.np",
+        path: "/api/epay/transrec",
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": Buffer.byteLength(params.toString()) },
+      };
+      const req = https.request(options, (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => { try { resolve(JSON.parse(data)); } catch (e) { reject(e); } });
+      });
+      req.on("error", reject);
+      req.write(params.toString());
+      req.end();
+    });
   }
+
+  /* ---- Payment providers ---- */
+  if (url.pathname === "/api/payments/providers" && request.method === "GET") {
+    return json(response, 200, { providers: gatewayConfig, esewaMerchantCode: process.env.ESEWA_MERCHANT_CODE || null });
+  }
+
+  /* ---- Create payment order (supports esewa, khalti, bank) ---- */
   if (url.pathname === "/api/payments/orders" && request.method === "POST") {
     const body = await readJson(request);
     const amount = Number(body.amount);
-    if (
-      !gatewayConfig[body.provider] ||
-      !body.customerName ||
-      !body.customerPhone ||
-      !Number.isFinite(amount) ||
-      amount <= 0
-    ) {
-      return json(response, 400, {
-        error:
-          "Valid provider, customerName, customerPhone and positive amount are required",
-        providers: gatewayConfig,
-      });
+    const vat = Number(body.vat || 0);
+    const totalAmount = amount + vat;
+    if (!body.customerName || !body.customerPhone || !Number.isFinite(totalAmount) || totalAmount <= 0) {
+      return json(response, 400, { error: "Valid customerName, customerPhone and positive amount are required" });
     }
     const orderId = `BW-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
+    const provider = body.provider || "bank";
+    if (provider !== "bank" && !gatewayConfig[provider]) {
+      return json(response, 400, { error: `${provider} payment gateway is not configured yet. Add API keys to Render environment variables.` });
+    }
     const result = await pool.query(
       "INSERT INTO payment_orders (order_id, provider, customer_name, customer_phone, amount) VALUES ($1, $2, $3, $4, $5) RETURNING order_id, provider, amount, currency, status, created_at",
-      [
-        orderId,
-        body.provider,
-        String(body.customerName).trim(),
-        String(body.customerPhone).trim(),
-        amount,
-      ],
+      [orderId, provider, String(body.customerName).trim(), String(body.customerPhone).trim(), totalAmount],
     );
-    return json(response, 201, {
-      order: result.rows[0],
-      message:
-        body.provider === "bank"
-          ? "Bank transfer order created"
-          : "Gateway order created; provider credentials are configured",
-    });
+    const order = result.rows[0];
+
+    /* eSewa: build redirect URL */
+    if (provider === "esewa" && process.env.ESEWA_MERCHANT_CODE && process.env.ESEWA_SECRET_KEY) {
+      const amt = totalAmount;
+      const refId = orderId;
+      const productCode = process.env.ESEWA_MERCHANT_CODE;
+      const msg = `total_amount=${amt},transaction_uuid=${refId},product_code=${productCode}`;
+      const signature = crypto.createHmac("sha256", process.env.ESEWA_SECRET_KEY).update(msg).digest("hex");
+      const esewaUrl = `https://esewa.com.np/pay?amt=${amt}&dc=0&pc=${productCode}&scd=${productCode}&rid=${refId}&scm=0&su=${encodeURIComponent((url.origin || "https://biswokarma-workshop-1.onrender.com") + "/api/payments/callback/esewa")}&fu=${encodeURIComponent((url.origin || "https://biswokarma-workshop-1.onrender.com") + "/api/payments/callback/esewa")}&prn=${orderId}&sig=${signature}`;
+      return json(response, 201, { order, esewaUrl, message: "Redirect customer to eSewa for payment" });
+    }
+
+    /* Khalti: build redirect URL */
+    if (provider === "khalti" && process.env.KHALTI_SECRET_KEY) {
+      return json(response, 201, { order, message: "Khalti integration pending - add KHALTI_SECRET_KEY to Render" });
+    }
+
+    return json(response, 201, { order, message: "Bank transfer order created. Share bank details with customer." });
   }
+
+  /* ---- eSewa payment callback ---- */
+  if (url.pathname === "/api/payments/callback/esewa" && request.method === "GET") {
+    const params = new URLSearchParams(url.search);
+    const refId = params.get("refId") || params.get("rid") || "";
+    const amt = params.get("amt") || "0";
+    if (!refId) return json(response, 400, { error: "Missing reference ID" });
+    try {
+      const verifyResult = await esewaVerify(refId, amt, process.env.ESEWA_SECRET_KEY);
+      if (verifyResult && verifyResult.response_code === "000") {
+        await pool.query(
+          "UPDATE payment_orders SET status = 'success', transaction_id = $1, updated_at = NOW() WHERE order_id = $2",
+          [refId, refId]
+        );
+        return json(response, 200, { status: "success", orderId: refId, message: "Payment verified and recorded!" });
+      } else {
+        await pool.query(
+          "UPDATE payment_orders SET status = 'failed', transaction_id = $1, updated_at = NOW() WHERE order_id = $2",
+          [refId, refId]
+        );
+        return json(response, 200, { status: "failed", orderId: refId, message: "Payment verification failed." });
+      }
+    } catch (err) {
+      console.error("eSewa verification error:", err.message);
+      return json(response, 500, { error: "Payment verification error" });
+    }
+  }
+
+  /* ---- Generic callback for webhooks ---- */
   const paymentCallback = url.pathname.match(
     /^\/api\/payments\/orders\/([^/]+)\/callback$/,
   );
@@ -241,18 +305,9 @@ async function api(request, response, url) {
       return json(response, 400, { error: "Invalid payment status" });
     const result = await pool.query(
       "UPDATE payment_orders SET status = $1, transaction_id = COALESCE($2, transaction_id), provider_payload = $3::jsonb, updated_at = NOW() WHERE order_id = $4 RETURNING *",
-      [
-        body.status,
-        body.transactionId || null,
-        JSON.stringify(body),
-        paymentCallback[1],
-      ],
+      [body.status, body.transactionId || null, JSON.stringify(body), paymentCallback[1]],
     );
-    return json(
-      response,
-      result.rowCount ? 200 : 404,
-      result.rowCount ? result.rows[0] : { error: "Payment order not found" },
-    );
+    return json(response, result.rowCount ? 200 : 404, result.rowCount ? result.rows[0] : { error: "Payment order not found" });
   }
   return json(response, 404, { error: "API route not found" });
 }

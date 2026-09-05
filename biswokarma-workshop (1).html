@@ -1899,7 +1899,7 @@
               flash,
             }),
           tab === "payments" &&
-            React.createElement(Payments, { bills, persistBills, flash }),
+            React.createElement(Payments, { bills, persistBills, customers, flash }),
           tab === "billing" &&
             React.createElement(NewBill, {
               parts,
@@ -2752,21 +2752,57 @@
         );
       }
 
-      function Payments({ bills, persistBills, flash }) {
+      function Payments({ bills, persistBills, customers, flash }) {
+        const [providers, setProviders] = React.useState({});
+        const [paying, setPaying] = React.useState(null);
+        React.useEffect(() => {
+          fetch("/api/payments/providers").then(r => r.json()).then(d => setProviders(d.providers || {})).catch(() => {});
+        }, []);
         const markPaid = (id) => {
           persistBills(
             bills.map((bill) =>
-              bill.id === id
-                ? {
-                    ...bill,
-                    paid: Number(bill.total || 0),
-                    due: 0,
-                    paymentStatus: "Paid",
-                  }
-                : bill,
+              bill.id === id ? { ...bill, paid: Number(bill.total || 0), due: 0, paymentStatus: "Paid", paymentMethod: "Cash" } : bill,
             ),
           );
           flash("Payment recorded and outstanding balance updated.");
+        };
+        const payViaEsewa = async (bill) => {
+          setPaying(bill.id);
+          try {
+            const res = await fetch("/api/payments/orders", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                provider: "esewa",
+                customerName: (bill.customer && bill.customer.name) || "Walk-in",
+                customerPhone: (bill.customer && bill.customer.phone) || "0000000000",
+                amount: bill.due,
+                vat: 0,
+              }),
+            });
+            const data = await res.json();
+            if (data.esewaUrl) {
+              persistBills(
+                bills.map((b) => b.id === bill.id ? { ...b, paymentMethod: "eSewa", paymentStatus: "Pending" } : b),
+              );
+              window.open(data.esewaUrl, "_blank");
+              flash("eSewa payment window opened. Customer should complete payment there.");
+            } else {
+              flash(data.error || "eSewa is not configured yet. Add ESEWA_MERCHANT_CODE and ESEWA_SECRET_KEY in Render.");
+            }
+          } catch (e) {
+            flash("Payment error: " + e.message);
+          } finally {
+            setPaying(null);
+          }
+        };
+        const markBankTransfer = (id) => {
+          persistBills(
+            bills.map((bill) =>
+              bill.id === id ? { ...bill, paymentMethod: "Bank Transfer", paymentStatus: "Pending" } : bill,
+            ),
+          );
+          flash("Marked as Bank Transfer. Verify payment manually.");
         };
         const pending = bills.filter((bill) => Number(bill.due || 0) > 0);
         return React.createElement(
@@ -2778,19 +2814,13 @@
             React.createElement(
               "div",
               null,
-              React.createElement(
-                "span",
-                { className: "eyebrow" },
-                "Receivables",
-              ),
+              React.createElement("span", { className: "eyebrow" }, "Receivables"),
               React.createElement("h2", null, "Payments"),
             ),
             React.createElement(
               "strong",
               { className: "panelTotal" },
-              fmt(
-                pending.reduce((sum, bill) => sum + Number(bill.due || 0), 0),
-              ),
+              fmt(pending.reduce((sum, bill) => sum + Number(bill.due || 0), 0)),
             ),
           ),
           React.createElement(
@@ -2809,7 +2839,7 @@
                   React.createElement("th", null, "Customer"),
                   React.createElement("th", null, "Due"),
                   React.createElement("th", null, "Method"),
-                  React.createElement("th", null, "Action"),
+                  React.createElement("th", null, "Actions"),
                 ),
               ),
               React.createElement(
@@ -2821,40 +2851,38 @@
                         "tr",
                         { key: bill.id },
                         React.createElement("td", null, bill.invoiceNo),
-                        React.createElement(
-                          "td",
-                          null,
-                          bill.customer && bill.customer.name,
-                        ),
+                        React.createElement("td", null, bill.customer && bill.customer.name),
                         React.createElement("td", null, fmt(bill.due)),
-                        React.createElement(
-                          "td",
-                          null,
-                          bill.paymentMethod || "Cash",
-                        ),
+                        React.createElement("td", null, bill.paymentMethod || "Pending"),
                         React.createElement(
                           "td",
                           null,
                           React.createElement(
-                            "button",
-                            {
+                            "div",
+                            { style: { display: "flex", gap: "6px", flexWrap: "wrap" } },
+                            providers.esewa
+                              ? React.createElement("button", {
+                                  className: "btnSmall",
+                                  style: { background: "#60BB46", color: "#fff", border: "none" },
+                                  disabled: paying === bill.id,
+                                  onClick: () => payViaEsewa(bill),
+                                }, paying === bill.id ? "Processing..." : "eSewa Pay")
+                              : null,
+                            React.createElement("button", {
                               className: "btnSmall",
+                              style: { background: "#d4a72c", color: "#000", border: "none" },
                               onClick: () => markPaid(bill.id),
-                            },
-                            "Mark paid",
+                            }, "Cash Paid"),
+                            React.createElement("button", {
+                              className: "btnSmall",
+                              style: { background: "#3b82f6", color: "#fff", border: "none" },
+                              onClick: () => markBankTransfer(bill.id),
+                            }, "Bank Transfer"),
                           ),
                         ),
                       ),
                     )
-                  : React.createElement(
-                      "tr",
-                      null,
-                      React.createElement(
-                        "td",
-                        { colSpan: 5, className: "empty" },
-                        "No pending payments.",
-                      ),
-                    ),
+                  : React.createElement("tr", null, React.createElement("td", { colSpan: 5, className: "empty" }, "No pending payments.")),
               ),
             ),
           ),

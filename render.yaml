@@ -15,6 +15,12 @@ services:
         generateValue: true
       - key: PORT
         value: 10000
+      - key: ESEWA_MERCHANT_CODE
+        sync: false
+      - key: ESEWA_SECRET_KEY
+        sync: false
+      - key: KHALTI_SECRET_KEY
+        sync: false
 
 databases:
   - name: biswokarma-db
