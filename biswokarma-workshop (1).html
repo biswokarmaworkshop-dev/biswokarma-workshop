@@ -338,6 +338,16 @@
       function getPartImage(part) {
         if (part.image) return part.image;
         const name = part.name || "";
+        /* Pehle /images/ folder mein dhundho - file naming convention:
+           images/hydraulic-pump.jpg, images/air-filter.png, etc.
+           Hyphen-separated, lowercase, .jpg ya .png */
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const imageExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+        /* Exact name match first */
+        for (const ext of imageExtensions) {
+          return "/images/" + slug + ext;
+        }
+        /* SVG illustration fallback */
         for (const key of Object.keys(partSvgIcons)) {
           if (name.includes(key)) return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(partSvgIcons[key]);
         }

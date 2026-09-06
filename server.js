@@ -10,6 +10,7 @@ const port = process.env.PORT || 3000;
 const htmlFile = path.join(__dirname, "biswokarma-workshop (1).html");
 const localDatabaseFile = path.join(__dirname, "workshop-state.json");
 const vendorDirectory = path.join(__dirname, "vendor");
+const imagesDirectory = path.join(__dirname, "images");
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -355,6 +356,24 @@ Sitemap: https://biswokarma-workshop-1.onrender.com/sitemap.xml`;
 </urlset>`;
     response.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
     return response.end(sitemapContent);
+  }
+  if (url.pathname.startsWith("/images/")) {
+    const requestedFile = path.resolve(
+      imagesDirectory,
+      decodeURIComponent(url.pathname.slice("/images/".length)),
+    );
+    if (!requestedFile.startsWith(`${imagesDirectory}${path.sep}`))
+      return json(response, 400, { error: "Invalid image path" });
+    return fs.readFile(requestedFile, (error, content) => {
+      if (error) return json(response, 404, { error: "Image not found" });
+      const ext = path.extname(requestedFile).toLowerCase();
+      const types = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif" };
+      response.writeHead(200, {
+        "Content-Type": (types[ext] || "application/octet-stream") + "; charset=utf-8",
+        "Cache-Control": "public, max-age=86400",
+      });
+      response.end(content);
+    });
   }
   if (url.pathname.startsWith("/vendor/")) {
     const requestedFile = path.resolve(
