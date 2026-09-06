@@ -1963,6 +1963,7 @@
                   suppliers,
                   bills,
                   setTab,
+                  isOwner,
                 })),
           tab === "financial" &&
             isOwner &&
@@ -2516,6 +2517,7 @@
         suppliers,
         bills,
         setTab,
+        isOwner,
       }) {
         const sales = bills.reduce(
           (sum, bill) => sum + Number(bill.total || 0),
@@ -2541,6 +2543,90 @@
             React.createElement("small", null, "View details  >"),
           );
         const recent = bills.slice(0, 5);
+
+        /* Owner Portal - Different Layout */
+        if (isOwner) {
+          return React.createElement(
+            "div",
+            { className: "ownerDashboard" },
+            React.createElement(
+              "div",
+              { className: "ownerWelcome", style: { textAlign: "center", padding: "30px 0 20px" } },
+              React.createElement("h2", { style: { fontSize: "28px", margin: "0 0 8px" } }, "\uD83D\uDC51 Welcome, Owner"),
+              React.createElement("p", { className: "hint", style: { fontSize: "15px" } }, "Business overview at a glance"),
+            ),
+            React.createElement(
+              "div",
+              { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" } },
+              card("Total Revenue", fmt(sales), "gold", "reports"),
+              card("Due Payments", fmt(due), "rust", "invoices"),
+              card("Monthly Sales", fmt(monthSales), "slate", "reports"),
+              card("Low Stock Items", lowStock.length, "rust", "stock"),
+            ),
+            React.createElement(
+              "div",
+              { style: { display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px" } },
+              React.createElement(
+                "div",
+                { className: "chartCard" },
+                React.createElement("h3", null, "\uD83D\uDCC8 Recent Invoices"),
+                recent.length > 0
+                  ? React.createElement("table", { className: "bankTxnTable" },
+                      React.createElement("thead", null,
+                        React.createElement("tr", null,
+                          React.createElement("th", null, "Invoice"),
+                          React.createElement("th", null, "Customer"),
+                          React.createElement("th", null, "Amount"),
+                          React.createElement("th", null, "Status"),
+                        ),
+                      ),
+                      React.createElement("tbody", null,
+                        recent.map((b, i) =>
+                          React.createElement("tr", { key: i },
+                            React.createElement("td", null, b.invoiceNo),
+                            React.createElement("td", null, b.customer && b.customer.name),
+                            React.createElement("td", null, fmt(b.total)),
+                            React.createElement("td", null,
+                              React.createElement("span", {
+                                className: "statusBadge " + (b.paymentStatus === "Paid" ? "success" : "pending"),
+                              }, b.paymentStatus || "Pending"),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : React.createElement("p", { className: "empty" }, "No invoices yet"),
+              ),
+              React.createElement(
+                "div",
+                { className: "chartCard" },
+                React.createElement("h3", null, "\u26A0\uFE0F Alerts"),
+                React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "10px" } },
+                  lowStock.length > 0
+                    ? React.createElement("div", { className: "chip", style: { padding: "12px" } },
+                        React.createElement("strong", null, "Low Stock: ", lowStock.length, " items"),
+                        React.createElement("small", null, lowStock.slice(0, 3).map(p => p.name).join(", ") + (lowStock.length > 3 ? "..." : "")),
+                      )
+                    : null,
+                  pending.length > 0
+                    ? React.createElement("div", { className: "chip", style: { padding: "12px" } },
+                        React.createElement("strong", null, "Pending Inquiries: ", pending.length),
+                      )
+                    : null,
+                  due > 0
+                    ? React.createElement("div", { className: "chip", style: { padding: "12px" } },
+                        React.createElement("strong", null, "Due Amount: ", fmt(due)),
+                      )
+                    : null,
+                  lowStock.length === 0 && pending.length === 0 && due === 0
+                    ? React.createElement("p", { className: "empty" }, "All clear! No alerts."),
+                ),
+              ),
+            ),
+          );
+        }
+
+        /* Admin Portal - Original Layout */
         return React.createElement(
           "div",
           { className: "erpOverview" },
@@ -5890,11 +5976,29 @@
       .erpNav .tab { border: 1px solid transparent; border-radius: 5px; text-align: left; padding: 11px 12px; color: #aeb6bd; margin: 0; }
       .erpNav .tab:hover { background: rgba(255,255,255,.06); color: var(--silver); }
       .erpNav .tab.active { background: linear-gradient(135deg, rgba(212,167,44,.22), rgba(212,167,44,.06)); border-color: rgba(212,167,44,.6); color: var(--amber2); }
-      [data-role="owner"] .erpNav .tab.active { background: linear-gradient(135deg, rgba(192,192,192,.2), rgba(212,167,44,.1)); border-color: rgba(192,192,192,.6); color: #e5e5e5; }
-      [data-role="owner"] .erpMetric { border-color: rgba(192,192,192,.2); }
-      [data-role="owner"] .amberTile { background: linear-gradient(135deg, #d4a72c, #c0c0c0); }
-      [data-role="owner"] .darkTile { background: linear-gradient(135deg, #0a0a0f, #1a1a2e); }
-      [data-role="owner"] .rustTile { background: linear-gradient(135deg, #c0c0c0, #2a2a3e); }
+      /* ========== OWNER PORTAL - Black to Grey Premium ========== */
+      [data-role="owner"] .app { background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 40%, #2a2a2a 70%, #3a3a3a 100%); }
+      [data-role="owner"] .topbar { background: linear-gradient(110deg, #0a0a0a, #1a1a1a 50%, #0a0a0a); border-bottom: 1px solid rgba(200,200,200,.1); }
+      [data-role="owner"] .erpNav { background: linear-gradient(180deg, #111, #1a1a1a); border-right: 1px solid rgba(200,200,200,.08); }
+      [data-role="owner"] .erpNav .tab { color: #888; border-color: transparent; }
+      [data-role="owner"] .erpNav .tab:hover { color: #ccc; background: rgba(200,200,200,.05); }
+      [data-role="owner"] .erpNav .tab.active { background: linear-gradient(135deg, rgba(200,200,200,.15), rgba(200,200,200,.05)); border-color: rgba(200,200,200,.4); color: #e5e5e5; box-shadow: 0 0 12px rgba(200,200,200,.08); }
+      [data-role="owner"] .erpMetric { background: linear-gradient(145deg, #1a1a1a, #2a2a2a); border: 1px solid rgba(200,200,200,.12); box-shadow: 0 8px 24px rgba(0,0,0,.5); border-radius: 14px; }
+      [data-role="owner"] .erpMetric:hover { border-color: rgba(200,200,200,.3); box-shadow: 0 12px 32px rgba(0,0,0,.6); transform: translateY(-3px); }
+      [data-role="owner"] .amberTile { background: linear-gradient(135deg, #444, #888); color: #fff; }
+      [data-role="owner"] .darkTile { background: linear-gradient(135deg, #0a0a0a, #222); color: #ddd; }
+      [data-role="owner"] .rustTile { background: linear-gradient(135deg, #333, #666); color: #eee; }
+      [data-role="owner"] .steelTile { background: linear-gradient(135deg, #777, #aaa); color: #111; }
+      [data-role="owner"] h1 { background: linear-gradient(135deg, #999, #fff, #999); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+      [data-role="owner"] .chartCard { background: linear-gradient(145deg, #151515, #252525); border-color: rgba(200,200,200,.1); }
+      [data-role="owner"] .tableWrap { background: linear-gradient(145deg, #121212, #1e1e1e); border-color: rgba(200,200,200,.1); }
+      [data-role="owner"] th { color: #bbb; background: linear-gradient(135deg, #1a1a1a, #2a2a2a); }
+      [data-role="owner"] td { color: #999; border-color: rgba(200,200,200,.08); }
+      [data-role="owner"] .settingsPanel { background: linear-gradient(145deg, #131313, #222); border-color: rgba(200,200,200,.1); }
+      [data-role="owner"] .serviceCard { background: linear-gradient(145deg, #161616, #282828); border-color: rgba(200,200,200,.1); }
+      [data-role="owner"] .chip, [data-role="owner"] .hint { background: #222; color: #aaa; border-color: rgba(200,200,200,.12); }
+      [data-role="owner"] .empty { color: #666; }
+      [data-role="owner"] .foot { background: linear-gradient(110deg, #0a0a0a, #1a1a1a, #0a0a0a); border-top: 1px solid rgba(200,200,200,.08); }
       .metricGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
       .erpMetric { min-height: 116px; border: 1px solid rgba(229,233,236,.13); border-radius: 8px; padding: 18px; text-align: left; display: flex; flex-direction: column; gap: 8px; color: var(--silver); background: linear-gradient(145deg, #20262a, #0d0f11); box-shadow: 0 12px 25px rgba(0,0,0,.25); transition: transform .18s ease, border-color .18s ease; }
       .erpMetric:hover { transform: translateY(-3px); border-color: var(--amber); }
