@@ -1971,7 +1971,11 @@
               bills,
               parts,
             }),
-          tab === "banking" && isOwner && React.createElement(Banking, null),
+          tab === "banking" && isOwner && React.createElement(BankingSystem, {
+            bills,
+            persistBills,
+            flash,
+          }),
           tab === "stock" &&
             React.createElement(Stock, {
               parts,
