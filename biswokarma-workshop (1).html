@@ -1899,15 +1899,12 @@
             label: `Suppliers (${suppliers.length})`,
           },
           { id: "purchases", label: "Purchases" },
-          { id: "payments", label: "Payments" },
-          {
-            id: "billing",
-            label: "Billing",
-          },
+          !isOwner && { id: "billing", label: "Billing" },
           {
             id: "invoices",
             label: `Invoices (${bills.length})`,
           },
+          { id: "banking", label: "Banking System" },
           { id: "reports", label: "Reports" },
           isOwner && { id: "users", label: "Users & Roles" },
           { id: "notifications", label: "Notifications" },
@@ -1921,8 +1918,9 @@
           "section",
           {
             className: "pageSection erpShell",
+            "data-role": isOwner ? "owner" : "admin",
           },
-          React.createElement("h1", null, "Biswokarma ERP"),
+          React.createElement("h1", null, isOwner ? "Biswokarma Owner Portal" : "Biswokarma ERP"),
           React.createElement(
             "p",
             {
@@ -2008,6 +2006,8 @@
             }),
           tab === "payments" &&
             React.createElement(Payments, { bills, persistBills, customers, flash }),
+          tab === "banking" &&
+            React.createElement(BankingSystem, { bills, persistBills, flash }),
           tab === "billing" &&
             React.createElement(NewBill, {
               parts,
@@ -2993,6 +2993,119 @@
                   : React.createElement("tr", null, React.createElement("td", { colSpan: 5, className: "empty" }, "No pending payments.")),
               ),
             ),
+          ),
+        );
+      }
+
+      function BankingSystem({ bills, persistBills, flash }) {
+        const [selectedProvider, setSelectedProvider] = React.useState(null);
+        const [bankForm, setBankForm] = React.useState({ username: "", password: "" });
+        const providers = [
+          { id: "fonepay", name: "Fonepay Digital Seva", desc: "Connect Fonepay for QR and mobile payments", color: "#7c3aed" },
+          { id: "bank", name: "Company Bank Account", desc: "Login to your business bank account", color: "#059669" },
+          { id: "esewa", name: "eSewa Digital Wallet", desc: "eSewa merchant dashboard access", color: "#16a34a" },
+          { id: "khalti", name: "Khalti Payment Gateway", desc: "Khalti merchant portal login", color: "#5b21b6" },
+        ];
+        const allTxns = bills.filter(b => b.paymentMethod && b.paymentMethod !== "Cash").map(b => ({
+          invoice: b.invoiceNo,
+          customer: b.customer && b.customer.name,
+          amount: b.total,
+          method: b.paymentMethod,
+          status: b.paymentStatus || "Pending",
+          date: b.date,
+        }));
+        if (selectedProvider) {
+          const prov = providers.find(p => p.id === selectedProvider);
+          return React.createElement("div", { className: "modulePanel" },
+            React.createElement("div", { className: "panelHeading" },
+              React.createElement("div", null,
+                React.createElement("button", { className: "btnGhost", onClick: () => setSelectedProvider(null), style: { marginBottom: "12px" } }, "\u2190 Back to Banking"),
+                React.createElement("h2", null, prov.name),
+              ),
+            ),
+            React.createElement("div", { className: "bankLoginBox" },
+              React.createElement("h3", null, "\uD83D\uDD10 Login to ", prov.name),
+              React.createElement("div", { className: "form" },
+                React.createElement("label", null, "Username / Email",
+                  React.createElement("input", {
+                    type: "text",
+                    placeholder: "Enter username or email",
+                    value: bankForm.username,
+                    onChange: (e) => setBankForm({ ...bankForm, username: e.target.value }),
+                  }),
+                ),
+                React.createElement("label", null, "Password",
+                  React.createElement("input", {
+                    type: "password",
+                    placeholder: "Enter password",
+                    value: bankForm.password,
+                    onChange: (e) => setBankForm({ ...bankForm, password: e.target.value }),
+                  }),
+                ),
+                React.createElement("button", {
+                  className: "btnPrimary",
+                  onClick: () => flash(prov.name + " login feature coming soon! Add API keys in Render."),
+                }, "Login to ", prov.name),
+              ),
+            ),
+          );
+        }
+        return React.createElement("div", { className: "modulePanel" },
+          React.createElement("div", { className: "panelHeading" },
+            React.createElement("div", null,
+              React.createElement("span", { className: "eyebrow" }, "Finance"),
+              React.createElement("h2", null, "Banking System"),
+            ),
+          ),
+          React.createElement("div", { className: "bankingHero" },
+            React.createElement("div", { className: "bankingHeroBg" }),
+            React.createElement("div", { className: "bankingHeroContent" },
+              React.createElement("h2", null, "\uD83C\uDFE6 Biswokarma Bank"),
+              React.createElement("p", null, "Secure payment gateway & banking integration"),
+            ),
+          ),
+          React.createElement("div", { className: "bankingCards" },
+            providers.map(p =>
+              React.createElement("div", {
+                key: p.id,
+                className: "bankingCard",
+                onClick: () => setSelectedProvider(p.id),
+              },
+                React.createElement("h3", null, p.name),
+                React.createElement("p", null, p.desc),
+              ),
+            ),
+          ),
+          React.createElement("div", { className: "chartCard" },
+            React.createElement("h3", null, "Recent Transactions"),
+            allTxns.length > 0
+              ? React.createElement("table", { className: "bankTxnTable" },
+                  React.createElement("thead", null,
+                    React.createElement("tr", null,
+                      React.createElement("th", null, "Invoice"),
+                      React.createElement("th", null, "Customer"),
+                      React.createElement("th", null, "Amount"),
+                      React.createElement("th", null, "Method"),
+                      React.createElement("th", null, "Status"),
+                    ),
+                  ),
+                  React.createElement("tbody", null,
+                    allTxns.slice(0, 10).map((t, i) =>
+                      React.createElement("tr", { key: i },
+                        React.createElement("td", null, t.invoice),
+                        React.createElement("td", null, t.customer),
+                        React.createElement("td", null, fmt(t.amount)),
+                        React.createElement("td", null, t.method),
+                        React.createElement("td", null,
+                          React.createElement("span", {
+                            className: "statusBadge " + (t.status === "Paid" || t.status === "success" ? "success" : t.status === "failed" ? "failed" : "pending"),
+                          }, t.status),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : React.createElement("p", { className: "empty" }, "No transactions yet. Payments made through gateway will appear here."),
           ),
         );
       }
@@ -5701,12 +5814,52 @@
       [data-theme="light"] .footerContactItem:hover { border-color: var(--amber); background: rgba(212,167,44,.08); }
       [data-theme="light"] .footerContactItem span { color: #666; }
 
+      .bankingHero { position: relative; width: 100%; min-height: 350px; border-radius: 16px; overflow: hidden; margin-bottom: 24px; display: flex; align-items: center; justify-content: center; }
+      .bankingHeroBg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 30%, rgba(212,167,44,.15), rgba(0,0,0,.8)), linear-gradient(180deg, #0a0c10, #111827, #0a0c10); filter: blur(0px); }
+      .bankingHeroBg::before { content: ''; position: absolute; inset: -20px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 400'%3E%3Crect fill='%23111' width='800' height='400'/%3E%3Crect x='200' y='100' width='400' height='200' rx='8' fill='%231a1a1a' stroke='%23d4a72c' stroke-width='1' opacity='.3'/%3E%3Crect x='220' y='80' width='360' height='30' rx='4' fill='%23d4a72c' opacity='.15'/%3E%3Cpath d='M350 100 L400 60 L450 100' fill='none' stroke='%23d4a72c' stroke-width='2' opacity='.3'/%3E%3Crect x='280' y='140' width='80' height='120' rx='4' fill='%23d4a72c' opacity='.08'/%3E%3Crect x='440' y='140' width='80' height='120' rx='4' fill='%23d4a72c' opacity='.08'/%3E%3Crect x='370' y='140' width='60' height='120' rx='30' fill='%23d4a72c' opacity='.1'/%3E%3Ctext x='400' y='330' text-anchor='middle' fill='%23d4a72c' font-family='serif' font-size='24' opacity='.4'%3EBISWOKARMA BANK%3C/text%3E%3C/svg%3E") center/cover; filter: blur(4px) brightness(0.5); transform: scale(1.1); }
+      .bankingHeroContent { position: relative; z-index: 2; text-align: center; padding: 40px; }
+      .bankingHeroContent h2 { font-size: 32px; color: var(--amber); margin-bottom: 8px; }
+      .bankingHeroContent p { color: var(--steel); font-size: 16px; }
+      .bankingCards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
+      .bankingCard { padding: 24px; border-radius: 12px; border: 1px solid rgba(212,167,44,.2); background: linear-gradient(145deg, #1a1a2e, #0d0f11); cursor: pointer; transition: all .25s ease; }
+      .bankingCard:hover { border-color: var(--amber); transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,.4), 0 0 20px rgba(212,167,44,.1); }
+      .bankingCard h3 { color: var(--amber); margin-bottom: 8px; font-size: 18px; }
+      .bankingCard p { color: var(--steel); font-size: 13px; }
+      .bankLoginBox { max-width: 480px; margin: 0 auto; padding: 32px; border-radius: 16px; border: 1px solid rgba(212,167,44,.25); background: linear-gradient(145deg, #1a1a2e, #0a0c10); box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+      .bankLoginBox h3 { text-align: center; color: var(--amber); margin-bottom: 20px; font-size: 22px; }
+      .bankProviderBtn { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px 20px; margin-bottom: 12px; border-radius: 10px; border: 1px solid rgba(229,233,236,.15); background: rgba(255,255,255,.03); color: var(--text); font-size: 15px; cursor: pointer; transition: all .2s; text-align: left; }
+      .bankProviderBtn:hover { border-color: var(--amber); background: rgba(212,167,44,.08); transform: translateX(4px); }
+      .bankProviderBtn .icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; color: #fff; font-weight: bold; }
+      .bankProviderBtn.fonepay .icon { background: linear-gradient(135deg, #6c2bd9, #9333ea); }
+      .bankProviderBtn.bank .icon { background: linear-gradient(135deg, #059669, #10b981); }
+      .bankProviderBtn.esewa .icon { background: linear-gradient(135deg, #16a34a, #22c55e); }
+      .bankProviderBtn.khalti .icon { background: linear-gradient(135deg, #5b21b6, #7c3aed); }
+      .bankTxnTable { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      .bankTxnTable th, .bankTxnTable td { padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(229,233,236,.1); }
+      .bankTxnTable th { color: var(--amber); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+      .bankTxnTable td { color: var(--text); }
+      .statusBadge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+      .statusBadge.success { background: rgba(34,197,94,.15); color: #22c55e; }
+      .statusBadge.pending { background: rgba(245,158,11,.15); color: #f59e0b; }
+      .statusBadge.failed { background: rgba(239,68,68,.15); color: #ef4444; }
+      [data-theme="light"] .bankingCard { background: #fff; border-color: #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+      [data-theme="light"] .bankLoginBox { background: #fff; border-color: #e0e0e0; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+      [data-theme="light"] .bankProviderBtn { background: #f9f9f9; border-color: #e0e0e0; color: #333; }
+      [data-theme="light"] .bankingHeroBg { background: radial-gradient(ellipse at 50% 30%, rgba(212,167,44,.1), rgba(255,255,255,.85)), linear-gradient(180deg, #e8e8e8, #fff, #e8e8e8); }
+      [data-theme="light"] .bankTxnTable th { color: var(--amber); background: #f5f5f5; }
+      [data-theme="light"] .bankTxnTable td { color: #333; border-color: #eee; }
+
       .erpShell { max-width: 1240px; padding-top: 30px; }
       .erpShell > h1 { font-size: 36px; letter-spacing: .4px; }
       .erpNav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; border: 0; margin: 24px 0 28px; padding: 12px; background: rgba(15,18,20,.72); border: 1px solid rgba(229,233,236,.12); border-radius: 8px; box-shadow: 0 14px 28px rgba(0,0,0,.22); }
       .erpNav .tab { border: 1px solid transparent; border-radius: 5px; text-align: left; padding: 11px 12px; color: #aeb6bd; margin: 0; }
       .erpNav .tab:hover { background: rgba(255,255,255,.06); color: var(--silver); }
       .erpNav .tab.active { background: linear-gradient(135deg, rgba(212,167,44,.22), rgba(212,167,44,.06)); border-color: rgba(212,167,44,.6); color: var(--amber2); }
+      [data-role="owner"] .erpNav .tab.active { background: linear-gradient(135deg, rgba(192,192,192,.2), rgba(212,167,44,.1)); border-color: rgba(192,192,192,.6); color: #e5e5e5; }
+      [data-role="owner"] .erpMetric { border-color: rgba(192,192,192,.2); }
+      [data-role="owner"] .amberTile { background: linear-gradient(135deg, #d4a72c, #c0c0c0); }
+      [data-role="owner"] .darkTile { background: linear-gradient(135deg, #0a0a0f, #1a1a2e); }
+      [data-role="owner"] .rustTile { background: linear-gradient(135deg, #c0c0c0, #2a2a3e); }
       .metricGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
       .erpMetric { min-height: 116px; border: 1px solid rgba(229,233,236,.13); border-radius: 8px; padding: 18px; text-align: left; display: flex; flex-direction: column; gap: 8px; color: var(--silver); background: linear-gradient(145deg, #20262a, #0d0f11); box-shadow: 0 12px 25px rgba(0,0,0,.25); transition: transform .18s ease, border-color .18s ease; }
       .erpMetric:hover { transform: translateY(-3px); border-color: var(--amber); }
