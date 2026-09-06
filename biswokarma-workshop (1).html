@@ -292,6 +292,57 @@
         return isNaN(n) ? 0 : n;
       };
       const fmt = (n) => "Rs " + Math.round(n).toLocaleString("en-IN");
+      /* Image mapping: part name keyword -> free image URL */
+      const partImageMap = {
+        "Hydraulic Pump": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+        "Main Control Valve": "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=300&fit=crop",
+        "Boom Cylinder Seal Kit": "https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?w=400&h=300&fit=crop",
+        "Bucket Cylinder": "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop",
+        "Hydraulic Hose": "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=300&fit=crop",
+        "Piston Ring Kit": "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&h=300&fit=crop",
+        "Fuel Injector": "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&h=300&fit=crop",
+        "Cylinder Head Gasket": "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=300&fit=crop",
+        "Water Pump": "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop",
+        "Radiator Assembly": "https://images.unsplash.com/photo-1597007066304-79a8e27ed57e?w=400&h=300&fit=crop",
+        "Fan Belt": "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&h=300&fit=crop",
+        "Air Filter": "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=400&h=300&fit=crop",
+        "Oil Filter": "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=400&h=300&fit=crop",
+        "Fuel Filter": "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=400&h=300&fit=crop",
+        "Track Roller": "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=400&h=300&fit=crop",
+        "Idler Wheel": "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=400&h=300&fit=crop",
+        "Track Chain": "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=400&h=300&fit=crop",
+        "Sprocket": "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=400&h=300&fit=crop",
+        "Bucket Teeth": "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop",
+        "Side Cutting Edge": "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop",
+        "Alternator": "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=400&h=300&fit=crop",
+        "Starter Motor": "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=400&h=300&fit=crop",
+        "Battery": "https://images.unsplash.com/photo-1614447202591-6e2ca5642c8b?w=400&h=300&fit=crop",
+        "Wiring Harness": "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=400&h=300&fit=crop",
+        "Headlight": "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop",
+        "Clutch Plate": "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&h=300&fit=crop",
+        "Gear Box": "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&h=300&fit=crop",
+        "Drive Shaft": "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&h=300&fit=crop",
+        "Universal Joint": "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400&h=300&fit=crop",
+        "Brake Shoe": "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=300&fit=crop",
+        "Operator Seat": "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?w=400&h=300&fit=crop",
+        "Cabin Door Glass": "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop",
+        "Wiper Motor": "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=400&h=300&fit=crop",
+        "Steering Cylinder": "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop",
+        "Swing Motor": "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=300&fit=crop",
+        "Travel Motor": "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=300&fit=crop",
+        "Pilot Valve": "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=300&fit=crop",
+        "Solenoid Valve": "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=300&fit=crop",
+        "Pressure Gauge": "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=300&fit=crop",
+        "Grease Gun": "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop",
+      };
+      function getPartImage(part) {
+        if (part.image) return part.image;
+        const name = part.name || "";
+        for (const key of Object.keys(partImageMap)) {
+          if (name.includes(key)) return partImageMap[key];
+        }
+        return null;
+      }
       const partPlaceholder = (part) => {
         const label = String(part.name || "JCB spare part").replace(
           /[<>&]/g,
@@ -1373,7 +1424,7 @@
                 },
                 React.createElement("img", {
                   className: "partImage",
-                  src: p.image || partPlaceholder(p),
+                  src: getPartImage(p) || partPlaceholder(p),
                   alt: `${p.name} JCB spare part for ${p.machine}`,
                   loading: "lazy",
                   onError: (event) => {
