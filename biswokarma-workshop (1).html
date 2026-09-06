@@ -639,6 +639,8 @@
       }
 
       /* ================= main app ================= */
+      /* Apply saved theme on page load */
+      document.documentElement.dataset.theme = loadShared("bw_theme", "dark");
       function App() {
         const [view, setView] = useState("home"); // home | parts | contact | login | dashboard
         const [tab, setTab] = useState("overview"); // overview | stock | inquiries | customers | suppliers | purchases | payments | billing | invoices | reports | users | notifications | audit | settings
@@ -907,19 +909,6 @@
                       },
                       "Log out",
                     ),
-                    React.createElement(
-                      "button",
-                      {
-                        className: "themeToggle",
-                        title: "Toggle theme",
-                        onClick: () => {
-                          const next = loadShared("bw_theme", "light") === "dark" ? "light" : "dark";
-                          saveShared("bw_theme", next);
-                          document.documentElement.dataset.theme = next;
-                        },
-                      },
-                      loadShared("bw_theme", "light") === "dark" ? "\u2600" : "\u263E",
-                    ),
                   )
                 : React.createElement(
                     "button",
@@ -929,6 +918,20 @@
                     },
                     "Login",
                   ),
+              React.createElement(
+                "button",
+                {
+                  className: "themeToggle",
+                  title: "Toggle theme",
+                  onClick: () => {
+                    const cur = loadShared("bw_theme", "dark");
+                    const next = cur === "dark" ? "light" : "dark";
+                    saveShared("bw_theme", next);
+                    document.documentElement.dataset.theme = next;
+                  },
+                },
+                loadShared("bw_theme", "dark") === "dark" ? "\u2600" : "\u263E",
+              ),
             ),
           ),
           toast &&
@@ -5076,7 +5079,7 @@
       /* ---------- settings: change own credentials ---------- */
       function Settings({ role, auth, persistAuth, flash }) {
         const acc = auth[role];
-        const [theme, setTheme] = useState(loadShared("bw_theme", "light"));
+        const [theme, setTheme] = useState(loadShared("bw_theme", "dark"));
         const [showPassword, setShowPassword] = useState(false);
         const [showConfirm, setShowConfirm] = useState(false);
         const [form, setForm] = useState({
@@ -5617,12 +5620,17 @@
       .footlinks button { background: none; border: none; color: #C8C6BE; font-size: 13px; }
       .footlinks button:hover { color: var(--amber); }
 
-      /* Metallic workshop theme and restrained 3D motion. */
-      :root { --ink: #070809; --steelDark: #111417; --amber: #d4a72c; --amber2: #ffe28a; --rust: #9b7418; --paper: #111417; --steel: #aeb6bd; --text: #d9dde0; --silver: #e5e9ec; }
-      .app { background: radial-gradient(circle at 50% -10%, #283038 0, #111417 34%, #070809 78%); color: var(--text); }
-      .app h1, .app h2, .app h3 { color: var(--silver); text-shadow: 0 2px 12px rgba(0,0,0,.65); }
-      .topbar, .foot { background: linear-gradient(110deg, #050607, #252b30 48%, #090a0b); box-shadow: 0 8px 26px rgba(0,0,0,.38); }
-      .navlinks button.active, .toast { background: linear-gradient(135deg, var(--amber2), var(--amber)); color: #12100a; box-shadow: 0 0 18px rgba(212,167,44,.28); }
+      /* Metallic workshop theme - default is dark */
+      :root, [data-theme="dark"] { --ink: #070809; --steelDark: #111417; --amber: #d4a72c; --amber2: #ffe28a; --rust: #9b7418; --paper: #111417; --steel: #aeb6bd; --text: #d9dde0; --silver: #e5e9ec; }
+      [data-theme="light"] { --ink: #16181A; --steelDark: #232522; --amber: #F5B700; --amber2: #FFD873; --rust: #C1440E; --paper: #EDEAE1; --steel: #8A8D91; --text: #3D3B36; --silver: #e5e9ec; }
+      [data-theme="dark"] .app, [data-theme="dark"] .app, .app { background: radial-gradient(circle at 50% -10%, #283038 0, #111417 34%, #070809 78%); color: var(--text); }
+      [data-theme="light"] .app { background: var(--paper); color: var(--text); }
+      [data-theme="dark"] .app h1, [data-theme="dark"] .app h2, [data-theme="dark"] .app h3 { color: var(--silver); text-shadow: 0 2px 12px rgba(0,0,0,.65); }
+      [data-theme="dark"] .topbar, [data-theme="dark"] .foot { background: linear-gradient(110deg, #050607, #252b30 48%, #090a0b); box-shadow: 0 8px 26px rgba(0,0,0,.38); }
+      [data-theme="dark"] .navlinks button.active, [data-theme="dark"] .toast { background: linear-gradient(135deg, var(--amber2), var(--amber)); color: #12100a; box-shadow: 0 0 18px rgba(212,167,44,.28); }
+      [data-theme="light"] .app h1, [data-theme="light"] .app h2, [data-theme="light"] .app h3 { color: var(--text); text-shadow: none; }
+      [data-theme="light"] .topbar, [data-theme="light"] .foot { background: linear-gradient(110deg, #2c3440, #3d4a55 48%, #2c3440); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+      [data-theme="light"] .navlinks button.active, [data-theme="light"] .toast { background: linear-gradient(135deg, var(--amber2), var(--amber)); color: #12100a; box-shadow: 0 0 8px rgba(212,167,44,.15); }
       .hero { position: relative; overflow: hidden; border: 1px solid rgba(229,233,236,.18); box-shadow: 0 22px 50px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.08); }
       .animatedGradient { background: radial-gradient(circle at 82% 42%, rgba(212,167,44,.16), transparent 28%), linear-gradient(135deg, #0b0d0f, #252b30 50%, #0b0d0f); background-size: 180% 180%; animation: gradientShift 12s ease infinite; }
       .heroText p, .processStep p { color: #c3c9ce; }
@@ -5631,28 +5639,19 @@
       .sunCoreGroup { transform-origin: 0 0; animation: sunRotate 18s linear infinite; }
       @keyframes emblemFloat { 0%, 100% { transform: translateY(0) rotateX(0deg) rotateY(0deg); } 50% { transform: translateY(-9px) rotateX(4deg) rotateY(-5deg); } }
       @keyframes sunRotate { to { transform: translate(160px,160px) rotate(360deg); } }
-      .serviceCard, .partCard, .chartCard, .tableWrap, .invoicePaper, .pickerBox, .settingsPanel, .bankForm { background: linear-gradient(145deg, #20262a, #0d0f11); border-color: rgba(229,233,236,.2); box-shadow: 0 12px 26px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.06); transform: translateZ(0); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
-      .serviceCard:hover, .partCard:hover, .chartCard:hover, .invoicePaper:hover, .bankForm:hover { transform: translateY(-5px) rotateX(1deg); border-color: rgba(212,167,44,.7); box-shadow: 0 20px 34px rgba(0,0,0,.42), 0 0 18px rgba(212,167,44,.12); }
-      .serviceCard p, .ctaBand p, .foot, .footlinks button { color: #b8c0c6; }
-      .btnPrimary { background: linear-gradient(135deg, var(--amber2), var(--amber)); color: #17130a; box-shadow: 0 7px 0 #765a13, 0 13px 22px rgba(0,0,0,.34); }
-      .btnPrimary:hover { background: linear-gradient(135deg, #fff0aa, #c8941e); transform: translateY(-3px); box-shadow: 0 10px 0 #765a13, 0 18px 26px rgba(0,0,0,.42); }
-      .btnGhost { border-color: var(--silver); color: var(--silver); background: rgba(255,255,255,.03); box-shadow: inset 0 0 0 1px rgba(255,255,255,.04); }
-      .btnGhost:hover { background: linear-gradient(135deg, #e9edf0, #8e979f); color: #101214; }
-      .form input, .form textarea, .partsControls input, .billGrid input, .billGrid select, .bankForm input, .bankForm select, .searchBar, .cellInput { background: #0c0f11; color: var(--silver); border-color: #69737b; box-shadow: inset 0 2px 8px rgba(0,0,0,.3); }
-      .form label, .billGrid label { color: #d1d7db; }
-      .tab.active { color: var(--amber2); border-color: var(--amber); text-shadow: 0 0 10px rgba(212,167,44,.3); }
-      .chip, .hint { background: #171b1e; color: var(--silver); border-color: #59636b; }
-      th { color: var(--amber2); }
-      td { color: #d0d6da; border-color: rgba(229,233,236,.12); }
-      .invoicePaper { color: var(--text); }
-      .invoiceTable th { background: linear-gradient(135deg, #30383e, #0a0c0e); }
-      .invoiceTable tr:nth-child(even) td { background: rgba(255,255,255,.035); }
-      .invoiceTag { background: linear-gradient(135deg, #e9edf0, #69737b); color: #0a0c0e; box-shadow: 0 5px 14px rgba(0,0,0,.3); }
-      .statTile { box-shadow: 0 12px 24px rgba(0,0,0,.32), inset 0 1px rgba(255,255,255,.15); }
-      .amberTile { background: linear-gradient(135deg, #ffe28a, #a97918); }
-      .rustTile { background: linear-gradient(135deg, #b9912d, #4d3914); }
-      .darkTile { background: linear-gradient(135deg, #3c454c, #0b0d0f); }
-      .steelTile { background: linear-gradient(135deg, #e5e9ec, #626d76); color: #101214; }
+      [data-theme="dark"] .serviceCard, [data-theme="dark"] .partCard, [data-theme="dark"] .chartCard, [data-theme="dark"] .tableWrap, [data-theme="dark"] .invoicePaper, [data-theme="dark"] .pickerBox, [data-theme="dark"] .settingsPanel, [data-theme="dark"] .bankForm { background: linear-gradient(145deg, #20262a, #0d0f11); border-color: rgba(229,233,236,.2); box-shadow: 0 12px 26px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.06); }
+      [data-theme="light"] .serviceCard, [data-theme="light"] .partCard, [data-theme="light"] .chartCard, [data-theme="light"] .tableWrap, [data-theme="light"] .invoicePaper, [data-theme="light"] .pickerBox, [data-theme="light"] .settingsPanel, [data-theme="light"] .bankForm { background: #fff; border-color: #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,.08); color: #333; }
+      [data-theme="light"] .form input, [data-theme="light"] .form textarea, [data-theme="light"] .partsControls input, [data-theme="light"] .billGrid input, [data-theme="light"] .billGrid select, [data-theme="light"] .bankForm input, [data-theme="light"] .bankForm select, [data-theme="light"] .searchBar, [data-theme="light"] .cellInput { background: #fff; color: #333; border-color: #ccc; box-shadow: inset 0 1px 3px rgba(0,0,0,.08); }
+      [data-theme="light"] .form label, [data-theme="light"] .billGrid label { color: #333; }
+      [data-theme="light"] th { color: var(--amber); background: #f5f5f5; }
+      [data-theme="light"] td { color: #333; border-color: #e0e0e0; }
+      [data-theme="light"] .chip, [data-theme="light"] .hint { background: #f0f0f0; color: #555; border-color: #ddd; }
+      [data-theme="light"] .erpNav { background: #f5f5f5; border-color: #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+      [data-theme="light"] .erpNav .tab { color: #666; }
+      [data-theme="light"] .erpNav .tab.active { background: linear-gradient(135deg, rgba(212,167,44,.15), rgba(212,167,44,.05)); color: var(--amber); }
+      [data-theme="light"] .erpMetric { background: #fff; border-color: #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,.06); color: #333; }
+      [data-theme="light"] .invoiceTable th { background: #f5f5f5; color: #333; }
+      [data-theme="light"] .invoiceTable tr:nth-child(even) td { background: #f9f9f9; }
 
       .erpShell { max-width: 1240px; padding-top: 30px; }
       .erpShell > h1 { font-size: 36px; letter-spacing: .4px; }
