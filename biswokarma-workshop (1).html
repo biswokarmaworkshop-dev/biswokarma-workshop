@@ -652,7 +652,7 @@
         const [purchases, setPurchases] = useState([]);
         const [bills, setBills] = useState([]);
         const [invoiceSeq, setInvoiceSeq] = useState(1);
-        const [currentUser, setCurrentUser] = useState(null);
+        const [currentUser, setCurrentUser] = useState(() => { try { return JSON.parse(localStorage.getItem("bw_currentUser")) || null; } catch(e) { return null; } });
         const [activeInvoice, setActiveInvoice] = useState(null);
         const [loaded, setLoaded] = useState(false);
         const [toast, setToast] = useState(null);
@@ -816,7 +816,7 @@
           });
         };
         const logout = () => {
-          setCurrentUser(null);
+          setCurrentUser(null); localStorage.removeItem("bw_currentUser");
           nav("home");
         };
         if (!loaded)
