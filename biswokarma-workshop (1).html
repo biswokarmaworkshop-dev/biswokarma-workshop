@@ -907,6 +907,19 @@
                       },
                       "Log out",
                     ),
+                    React.createElement(
+                      "button",
+                      {
+                        className: "themeToggle",
+                        title: "Toggle theme",
+                        onClick: () => {
+                          const next = loadShared("bw_theme", "light") === "dark" ? "light" : "dark";
+                          saveShared("bw_theme", next);
+                          document.documentElement.dataset.theme = next;
+                        },
+                      },
+                      loadShared("bw_theme", "light") === "dark" ? "\u2600" : "\u263E",
+                    ),
                   )
                 : React.createElement(
                     "button",
@@ -1014,7 +1027,7 @@
               React.createElement(
                 "span",
                 null,
-                "BISWOKARMA WORK SHOP \u00b7 Gorkha Bazar-8, Khol Khole \u00b7 biswokarmaworkshop@gmail.com",
+                "BISWOKARMA WORK SHOP \u00b7 Gorkha Bazar-8, Khol Khole, Gorkha, Nepal \u00b7 Phone: 9866389738 \u00b7 biswokarmaworkshop@gmail.com",
               ),
             ),
             React.createElement(
@@ -4843,31 +4856,28 @@
 
       /* ---------- printable VAT invoice ---------- */
       function InvoiceView({ bill, onBack }) {
+        const saveAsPDF = () => {
+          const printWindow = window.open("", "_blank");
+          const invoice = document.querySelector(".invoicePaper");
+          printWindow.document.write("<html><head><title>Invoice " + bill.invoiceNo + "</title><style>body{font-family:Arial,sans-serif;margin:20px;color:#000;background:#fff}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f5f5f5;font-weight:bold}.totalRow{font-weight:bold;font-size:18px}</style></head><body>");
+          printWindow.document.write(invoice.innerHTML);
+          printWindow.document.write("</body></html>");
+          printWindow.document.close();
+          printWindow.print();
+          printWindow.close();
+        };
         return React.createElement(
           "div",
-          {
-            className: "invoiceWrap",
-          },
+          { className: "invoiceWrap" },
           React.createElement(
             "div",
-            {
-              className: "noPrint invoiceBar",
-            },
+            { className: "noPrint invoiceBar" },
+            React.createElement("button", { className: "btnGhost", onClick: onBack }, "\u2190 Back"),
             React.createElement(
-              "button",
-              {
-                className: "btnGhost",
-                onClick: onBack,
-              },
-              "\u2190 Back",
-            ),
-            React.createElement(
-              "button",
-              {
-                className: "btnPrimary",
-                onClick: () => window.print(),
-              },
-              "Print / Save as PDF",
+              "div",
+              { style: { display: "flex", gap: "8px" } },
+              React.createElement("button", { className: "btnPrimary", onClick: () => window.print() }, "\uD83D\uDDA8 Save / Print"),
+              React.createElement("button", { className: "btnGhost", onClick: saveAsPDF }, "\uD83D\uDCBE Save As PDF"),
             ),
           ),
           React.createElement(
@@ -4890,17 +4900,17 @@
                 React.createElement(
                   "p",
                   null,
-                  "JCB Spare Parts & Machine Repair \u00b7 Gorkha Bazar-8, Khol Khole, Nepal",
+                  "JCB Spare Parts & Machine Repair",
                 ),
                 React.createElement(
                   "p",
                   null,
-                  "PAN/VAT No: 600510932 \u00b7 Phone: 98066567713",
+                  "PAN/VAT No: 600510932 \u00b7 Phone: 9866389738",
                 ),
                 React.createElement(
                   "p",
                   null,
-                  "Email: biswokarmaworkshop@gmail.com",
+                  "Gorkha Bazar-8, Khol Khole, Gorkha, Nepal\nEmail: biswokarmaworkshop@gmail.com",
                 ),
               ),
               React.createElement(
@@ -5220,37 +5230,64 @@
           ),
           React.createElement(
             "div",
-            {
-              className: "settingsPanel",
-            },
-            React.createElement("h3", null, "Workshop settings"),
+            { className: "settingsPanel" },
+            React.createElement("h3", null, "Workshop Settings"),
+            React.createElement("p", { className: "hint" }, "Workshop contacts: 9866389738 | WhatsApp: 9714205851"),
+            React.createElement("p", { className: "hint" }, "Business email: biswokarmaworkshop@gmail.com"),
+            React.createElement("p", { className: "hint" }, "Address: Gorkha Bazar-8, Khol Khole, Gorkha, Nepal"),
+          ),
+          React.createElement(
+            "div",
+            { className: "settingsPanel" },
+            React.createElement("h3", null, "Advanced Settings"),
             React.createElement(
-              "label",
-              null,
-              "Theme",
-              React.createElement(
-                "select",
-                {
-                  value: theme,
-                  onChange: (e) => {
-                    setTheme(e.target.value);
-                    saveShared("bw_theme", e.target.value);
-                    document.documentElement.dataset.theme = e.target.value;
-                  },
-                },
-                React.createElement("option", { value: "light" }, "Light"),
-                React.createElement("option", { value: "dark" }, "Dark"),
+              "div",
+              { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "12px" } },
+              React.createElement("div", null,
+                React.createElement("p", { className: "hint" }, "Auto backup"),
+                React.createElement("select", { className: "form", style: { width: "100%" } },
+                  React.createElement("option", null, "Every hour"),
+                  React.createElement("option", null, "Every 6 hours"),
+                  React.createElement("option", { selected: true }, "Daily"),
+                  React.createElement("option", null, "Manual only"),
+                ),
               ),
-            ),
-            React.createElement(
-              "p",
-              { className: "hint" },
-              "Workshop contacts: 98066567713 | WhatsApp: 9714205851 | 9866389738",
-            ),
-            React.createElement(
-              "p",
-              { className: "hint" },
-              "Business email: biswokarmaworkshop@gmail.com",
+              React.createElement("div", null,
+                React.createElement("p", { className: "hint" }, "Low stock alert threshold"),
+                React.createElement("input", { type: "number", defaultValue: "5", className: "form", style: { width: "100%" } }),
+              ),
+              React.createElement("div", null,
+                React.createElement("p", { className: "hint" }, "Default currency"),
+                React.createElement("select", { className: "form", style: { width: "100%" } },
+                  React.createElement("option", { selected: true }, "NPR (Rs)"),
+                  React.createElement("option", null, "INR (\u20B9)"),
+                  React.createElement("option", null, "USD ($)"),
+                ),
+              ),
+              React.createElement("div", null,
+                React.createElement("p", { className: "hint" }, "VAT rate (%)"),
+                React.createElement("input", { type: "number", defaultValue: "13", className: "form", style: { width: "100%" } }),
+              ),
+              React.createElement("div", null,
+                React.createElement("p", { className: "hint" }, "Invoice prefix"),
+                React.createElement("input", { type: "text", defaultValue: "INV-", className: "form", style: { width: "100%" } }),
+              ),
+              React.createElement("div", null,
+                React.createElement("p", { className: "hint" }, "Date format"),
+                React.createElement("select", { className: "form", style: { width: "100%" } },
+                  React.createElement("option", { selected: true }, "YYYY-MM-DD"),
+                  React.createElement("option", null, "DD/MM/YYYY"),
+                  React.createElement("option", null, "MM/DD/YYYY"),
+                ),
+              ),
+              React.createElement("div", { style: { gridColumn: "span 2" } },
+                React.createElement("p", { className: "hint" }, "PAN/VAT Number"),
+                React.createElement("input", { type: "text", defaultValue: "600510932", className: "form", style: { width: "100%" } }),
+              ),
+              React.createElement("div", { style: { gridColumn: "span 2" } },
+                React.createElement("p", { className: "hint" }, "Workshop Address"),
+                React.createElement("input", { type: "text", defaultValue: "Gorkha Bazar-8, Khol Khole, Gorkha, Nepal", className: "form", style: { width: "100%" } }),
+              ),
             ),
           ),
           React.createElement(
@@ -5398,6 +5435,8 @@
       .navlinks button:hover { color: var(--paper); }
       .navlinks button.active { color: var(--ink); background: var(--amber); }
       .logoutBtn { color: #ff8a70 !important; }
+      .themeToggle { background: rgba(255,255,255,.06); border: 1px solid rgba(229,233,236,.2); border-radius: 50%; width: 36px; height: 36px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--amber); transition: all .2s; }
+      .themeToggle:hover { background: rgba(212,167,44,.15); border-color: var(--amber); transform: scale(1.1); }
 
       .toast { position: sticky; top: 0; z-index: 20; background: var(--amber); color: var(--ink); text-align: center; padding: 10px; font-weight: 600; font-size: 14px; }
 
@@ -5666,9 +5705,11 @@
       .quickActions { background: linear-gradient(145deg, #20262a, #0d0f11); border: 1px solid rgba(229,233,236,.15); } .quickActionGrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 9px; padding: 0 20px 20px; } .quickActionGrid button, .ownerControls button { display: flex; justify-content: space-between; gap: 8px; padding: 11px 12px; border: 1px solid rgba(212,167,44,.35); border-radius: 5px; background: rgba(212,167,44,.08); color: #e3e7e9; cursor: pointer; text-align: left; } .quickActionGrid button span { color: var(--amber2); } .ownerControls { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 3px 0 20px; } .ownerControls .eyebrow { margin-right: 5px; } .ownerControls button { background: transparent; color: #aeb6bd; }
 
       @media print {
-        .topbar, .foot, .noPrint, .toast { display: none !important; }
-        main { max-width: 100%; padding: 0; }
-        .invoicePaper { box-shadow: none; border: none; }
+        body * { visibility: hidden !important; }
+        .invoiceWrap, .invoiceWrap * { visibility: visible !important; }
+        .invoiceWrap { position: absolute; left: 0; top: 0; width: 100%; padding: 10px; }
+        .noPrint { display: none !important; }
+        .invoicePaper { box-shadow: none; border: none; background: #fff; color: #000; }
       }
       @media (max-width: 640px) {
         .erpNav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
