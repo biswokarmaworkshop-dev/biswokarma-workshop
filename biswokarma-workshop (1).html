@@ -5315,7 +5315,29 @@
               ),
             ),
             form.password &&
-              React.createElement(PasswordStrength, { value: form.password }),
+              React.createElement("div", { className: "strengthBar" },
+                React.createElement("div", {
+                  style: {
+                    height: "6px",
+                    borderRadius: "3px",
+                    background: "#1a1f23",
+                    marginBottom: "6px",
+                  },
+                },
+                  React.createElement("div", {
+                    style: {
+                      height: "100%",
+                      borderRadius: "3px",
+                      width: `${(passwordStrength(form.password) / 4) * 100}%`,
+                      background: passwordStrength(form.password) <= 1 ? "#ef4444" : passwordStrength(form.password) <= 2 ? "#f59e0b" : passwordStrength(form.password) <= 3 ? "#3b82f6" : "#22c55e",
+                      transition: "width 0.3s ease",
+                    },
+                  }),
+                ),
+                React.createElement("small", { style: { color: "#8a8d91", fontSize: "12px" } },
+                  passwordStrength(form.password) <= 1 ? "Weak" : passwordStrength(form.password) <= 2 ? "Fair" : passwordStrength(form.password) <= 3 ? "Good" : "Strong",
+                ),
+              ),
             React.createElement(
               "label",
               null,
