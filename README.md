@@ -1,22 +1,31 @@
-# Product pages static generator
+# Biswokarma Workshop
 
-This branch adds a simple static generator that reads `data/products.json` and writes a product index and individual product pages to `dist/products/`.
+The live website is the Render-backed Node.js application served by `server.js`. It keeps the existing React interface, workshop state API, PostgreSQL/local-file persistence, login roles, inventory, invoices, payments, and admin/owner tools.
 
-How to use
-
-1. Make sure you have Node.js installed (v12+).
-2. Add your product images under `images/` (paths referenced in `data/products.json`).
-3. Run:
+## Run locally
 
 ```bash
-node scripts/generate.js
+npm install
+npm start
 ```
 
-4. The generated files will appear in `dist/products/`.
+Set `DATABASE_URL` to use PostgreSQL; without it, the server stores workshop state in a local JSON file. Render deployment continues to use `render.yaml` and `node server.js`.
 
-Notes & next steps
+## Live product pages
 
-- The sample `data/products.json` contains two example products. Replace or extend it with your full catalog.
-- Images are not included in this commit — add them to `images/` or update the `images` paths to point to your CDN.
-- To publish: deploy the `dist/` folder to GitHub Pages, Netlify, Vercel (static hosting), or your preferred host.
-- If you prefer a Next.js / dynamic solution, I can convert this to an SSG-based Next app instead.
+Each inventory item is available from **Spare Parts** and has a shareable `/products/<part-name>-<part-id>` detail URL. The live server serves the existing app for these URLs; the page loads the current inventory record, price, fitment, stock status, and any product image URL stored with the part.
+
+## VAT invoices
+
+Inventory and custom line prices are VAT-inclusive. New invoices keep the entered gross amount as the total, calculate the taxable amount as `total / 1.13`, and show the included 13% VAT separately. Existing invoices remain unchanged.
+
+## Optional sample-page generator
+
+`scripts/generate.js` is retained for generating the two sample records in `data/products.json` under `dist/products/`. It is separate from the live inventory and is not the Render website entry point.
+
+## Checks
+
+```bash
+npm run check
+npm test
+```
