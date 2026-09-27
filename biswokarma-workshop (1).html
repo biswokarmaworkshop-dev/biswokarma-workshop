@@ -68,6 +68,7 @@
       <div id="boot-loader">Loading workshop records&hellip;</div>
     </div>
 
+    <script src="/vendor/vat.js"></script>
     <script src="/vendor/react.production.min.js"></script>
     <script>
       /* function OwnerDashboard({ parts, inquiries, customers, suppliers, purchases,
@@ -291,7 +292,13 @@
         const n = parseFloat(String(v).replace(/[^0-9.]/g, ""));
         return isNaN(n) ? 0 : n;
       };
-      const fmt = (n) => "Rs " + Math.round(n).toLocaleString("en-IN");
+      const formatMoneyAmount = (n) =>
+        Number(n || 0).toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      const fmt = (n) => "Rs " + formatMoneyAmount(n);
+      const fmtExact = fmt;
       /* Part-specific SVG illustrations */
       
       ;
@@ -479,7 +486,19 @@
           body: "Collect the machine from the yard, or arrange transport back to your site.",
         },
       ];
-      const VAT_RATE = 0.13; // Nepal standard VAT
+      const { calculateVatInclusive, roundMoney } = BiswokarmaVat;
+      function slugifyPart(part) {
+        const name = String(part.name || "part")
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+        const id = String(part.id || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, "");
+        return `${name || "part"}-${id}`;
+      }
 
       /* ================= small atoms ================= */
       function GearMark({ size = 22 }) {
@@ -532,7 +551,7 @@
         );
       }
       /* 3D tilt wrapper — mouse-driven perspective tilt for a genuine (not just decorative) 3D feel */
-      function Tilt({ children, className, style }) {
+      function Tilt({ children, className, style, onClick }) {
         const onMove = (e) => {
           const card = e.currentTarget;
           const r = card.getBoundingClientRect();
@@ -553,6 +572,17 @@
             style: style,
             onMouseMove: onMove,
             onMouseLeave: onLeave,
+            onClick: onClick,
+            onKeyDown: onClick
+              ? (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onClick();
+                  }
+                }
+              : undefined,
+            role: onClick ? "button" : undefined,
+            tabIndex: onClick ? 0 : undefined,
           },
           children,
         );
@@ -572,7 +602,15 @@
       /* Apply saved theme on page load */
       document.documentElement.dataset.theme = loadShared("bw_theme", "dark");
       function App() {
-        const [view, setView] = useState("home"); // home | parts | contact | login | dashboard
+        const [view, setView] = useState(() =>
+          /^\/products\/[^/]+\/?$/.test(window.location.pathname)
+            ? "product"
+            : "home",
+        ); // home | parts | product | contact | login | dashboard
+        const [productSlug, setProductSlug] = useState(() => {
+          const match = window.location.pathname.match(/^\/products\/([^/]+)\/?$/);
+          return match ? match[1] : null;
+        });
         const [tab, setTab] = useState("overview"); // overview | stock | inquiries | customers | suppliers | purchases | payments | billing | invoices | reports | users | notifications | audit | settings
         const [auth, setAuth] = useState(null);
         const [parts, setParts] = useState([]);
@@ -737,13 +775,36 @@
           saveShared("bw_invoice_seq", next);
           syncDatabase("invoiceSeq", next);
         };
+        useEffect(() => {
+          const syncRoute = () => {
+            const match = window.location.pathname.match(/^\/products\/([^/]+)\/?$/);
+            setProductSlug(match ? match[1] : null);
+            setView(match ? "product" : "home");
+          };
+          window.addEventListener("popstate", syncRoute);
+          return () => window.removeEventListener("popstate", syncRoute);
+        }, []);
         const nav = (v, t) => {
+          if (
+            v !== "product" &&
+            window.location.pathname.startsWith("/products/")
+          ) {
+            window.history.pushState(null, "", "/");
+            setProductSlug(null);
+          }
           setView(v);
           if (t) setTab(t);
           window.scrollTo({
             top: 0,
             behavior: "smooth",
           });
+        };
+        const openProduct = (part) => {
+          const slug = slugifyPart(part);
+          window.history.pushState(null, "", `/products/${slug}`);
+          setProductSlug(slug);
+          setView("product");
+          window.scrollTo({ top: 0, behavior: "smooth" });
         };
         const logout = () => {
           setCurrentUser(null); localStorage.removeItem("bw_currentUser");
@@ -804,7 +865,8 @@
               React.createElement(
                 "button",
                 {
-                  className: view === "parts" ? "active" : "",
+                  className:
+                    view === "parts" || view === "product" ? "active" : "",
                   onClick: () => nav("parts"),
                 },
                 "Spare Parts",
@@ -887,6 +949,12 @@
               view === "parts" &&
                 React.createElement(Parts, {
                   parts,
+                  nav,
+                  onSelect: openProduct,
+                }),
+              view === "product" &&
+                React.createElement(ProductDetail, {
+                  part: parts.find((part) => slugifyPart(part) === productSlug),
                   nav,
                 }),
               view === "contact" &&
@@ -1325,7 +1393,217 @@
           ),
         );
       }
-      function Parts({ parts, nav }) {
+      function PartArtwork({ part, large }) {
+        const imageSource =
+          part.image &&
+          (/^(?:https?:|data:|\/)/i.test(part.image)
+            ? part.image
+            : `/${part.image}`);
+        return React.createElement(
+          "div",
+          {
+            className: "partVisual" + (large ? " partVisualLarge" : ""),
+            role: "img",
+            "aria-label": `${part.category} spare part illustration`,
+          },
+          React.createElement(
+            "svg",
+            {
+              viewBox: "0 0 480 300",
+              role: "img",
+              "aria-hidden": "true",
+            },
+            React.createElement("path", {
+              d: "M0 236h480M45 251h390",
+              stroke: "rgba(255,255,255,.12)",
+              strokeWidth: "2",
+            }),
+            React.createElement("path", {
+              d: "M104 192h173l42 30H94z",
+              fill: "#11191f",
+              stroke: "#62717b",
+              strokeWidth: "3",
+            }),
+            React.createElement("path", {
+              d: "M147 185h94l24 12H124z",
+              fill: "#f0a526",
+            }),
+            React.createElement("path", {
+              d: "M155 180l8-65 49-31 40 20-10 76z",
+              fill: "#e39a20",
+              stroke: "#ffd377",
+              strokeWidth: "4",
+              strokeLinejoin: "round",
+            }),
+            React.createElement("path", {
+              d: "M170 116l-4 57m35-80-8 92",
+              stroke: "#13202a",
+              strokeWidth: "5",
+            }),
+            React.createElement("path", {
+              d: "M244 105l75-57 26 13-71 70",
+              fill: "none",
+              stroke: "#f0a526",
+              strokeWidth: "17",
+              strokeLinecap: "round",
+              strokeLinejoin: "round",
+            }),
+            React.createElement("path", {
+              d: "M320 58l38 34-16 18-38-32",
+              fill: "none",
+              stroke: "#ffd377",
+              strokeWidth: "9",
+              strokeLinecap: "round",
+            }),
+            React.createElement("path", {
+              d: "M346 102l31 18-25 29-22-13z",
+              fill: "#e39a20",
+              stroke: "#ffd377",
+              strokeWidth: "3",
+              strokeLinejoin: "round",
+            }),
+            React.createElement("circle", {
+              cx: "149",
+              cy: "207",
+              r: "24",
+              fill: "#10171d",
+              stroke: "#9baab4",
+              strokeWidth: "5",
+            }),
+            React.createElement("circle", {
+              cx: "149",
+              cy: "207",
+              r: "8",
+              fill: "#f0a526",
+            }),
+            React.createElement("circle", {
+              cx: "249",
+              cy: "207",
+              r: "24",
+              fill: "#10171d",
+              stroke: "#9baab4",
+              strokeWidth: "5",
+            }),
+            React.createElement("circle", {
+              cx: "249",
+              cy: "207",
+              r: "8",
+              fill: "#f0a526",
+            }),
+            React.createElement("path", {
+              d: "M168 105h38l-5-31h-22z",
+              fill: "#b8d2dd",
+              stroke: "#15222b",
+              strokeWidth: "4",
+            }),
+          ),
+          imageSource &&
+            React.createElement("img", {
+              src: imageSource,
+              alt: part.name,
+              loading: "lazy",
+              onError: (event) => {
+                event.currentTarget.style.display = "none";
+              },
+            }),
+          React.createElement("span", { className: "partVisualCaption" }, part.category),
+        );
+      }
+
+      function ProductDetail({ part, nav }) {
+        useEffect(() => {
+          if (!part) return undefined;
+          const previousTitle = document.title;
+          const descriptionMeta = document.querySelector('meta[name="description"]');
+          const previousDescription = descriptionMeta && descriptionMeta.content;
+          document.title = `${part.name} | Biswokarma Workshop`;
+          if (descriptionMeta) {
+            descriptionMeta.content = `${part.name} for ${part.machine || "heavy machinery"} — check price and availability with Biswokarma Workshop.`;
+          }
+          return () => {
+            document.title = previousTitle;
+            if (descriptionMeta && previousDescription) {
+              descriptionMeta.content = previousDescription;
+            }
+          };
+        }, [part]);
+        if (!part) {
+          return React.createElement(
+            "section",
+            { className: "pageSection productNotFound" },
+            React.createElement("h1", null, "Part not found"),
+            React.createElement(
+              "p",
+              { className: "subtext" },
+              "This part may have been removed from the live inventory.",
+            ),
+            React.createElement(
+              "button",
+              { className: "btnPrimary", onClick: () => nav("parts") },
+              "Browse available parts",
+            ),
+          );
+        }
+        return React.createElement(
+          "section",
+          { className: "pageSection productDetail" },
+          React.createElement(
+            "button",
+            {
+              className: "backLink",
+              onClick: () => nav("parts"),
+            },
+            "\u2190 Back to spare parts",
+          ),
+          React.createElement(
+            "div",
+            { className: "productDetailGrid" },
+            React.createElement(PartArtwork, { part, large: true }),
+            React.createElement(
+              "div",
+              { className: "productDetailCopy" },
+              React.createElement("span", { className: "eyebrow" }, part.category),
+              React.createElement("h1", null, part.name),
+              React.createElement(
+                "p",
+                { className: "productFit" },
+                "Fitment: ",
+                part.machine || "Please confirm with the workshop",
+              ),
+              React.createElement(
+                "p",
+                { className: "productPrice" },
+                fmt(parseMoney(part.price)),
+                React.createElement("small", null, "VAT included"),
+              ),
+              React.createElement(
+                "p",
+                { className: part.stock > 0 ? "productAvailability" : "productAvailability unavailable" },
+                part.stock > 0 ? `${part.stock} available in workshop stock` : "Currently out of stock",
+              ),
+              React.createElement(
+                "p",
+                { className: "productDescription" },
+                `Workshop listing for ${part.name}. Contact our team to confirm compatibility with your machine and current availability before ordering.`,
+              ),
+              React.createElement(
+                "button",
+                { className: "btnPrimary", onClick: () => nav("contact") },
+                "Ask about this part",
+              ),
+              React.createElement(
+                "div",
+                { className: "productFacts" },
+                React.createElement("div", null, React.createElement("span", null, "Category"), React.createElement("strong", null, part.category)),
+                React.createElement("div", null, React.createElement("span", null, "Machine fit"), React.createElement("strong", null, part.machine || "Confirm with team")),
+                React.createElement("div", null, React.createElement("span", null, "Price basis"), React.createElement("strong", null, "VAT inclusive")),
+              ),
+            ),
+          ),
+        );
+      }
+
+      function Parts({ parts, nav, onSelect }) {
         const [q, setQ] = useState("");
         const [cat, setCat] = useState("All");
         const [page, setPage] = useState(1);
@@ -1338,7 +1616,7 @@
           (p) =>
             (cat === "All" || p.category === cat) &&
             (p.name.toLowerCase().includes(q.toLowerCase()) ||
-              p.machine.toLowerCase().includes(q.toLowerCase())),
+            String(p.machine || "").toLowerCase().includes(q.toLowerCase())),
         );
         const pageCount = Math.max(1, Math.ceil(filtered.length / perPage));
         const shown = filtered.slice((page - 1) * perPage, page * perPage);
@@ -1400,22 +1678,15 @@
                 {
                   className: "partCard",
                   key: p.id,
+                  onClick: () => onSelect(p),
                 },
-                React.createElement("img", {
-                  className: "partInfo",
-                  
-                  
-                  loading: "lazy",
-                  onError: (event) => {
-                    event.currentTarget.onerror = null;
-                    event.currentTarget.style.display = "none";
-                  },
-                }),
+                React.createElement(PartArtwork, { part: p }),
                 React.createElement("h3", null, p.name),
                 React.createElement(
                   "p",
                   { className: "partPrice" },
                   fmt(parseMoney(p.price)),
+                  React.createElement("small", null, "VAT included"),
                 ),
                 React.createElement(
                   "p",
@@ -1810,6 +2081,7 @@
           flash,
         } = props;
         const isOwner = currentUser.role === "owner";
+        const [menuOpen, setMenuOpen] = useState(() => window.innerWidth > 860);
         const tabs = [
           { id: "overview", label: "Dashboard" },
           {
@@ -1829,11 +2101,13 @@
             label: `Suppliers (${suppliers.length})`,
           },
           { id: "purchases", label: "Purchases" },
+          { id: "payments", label: "Payments" },
           !isOwner && { id: "billing", label: "Billing" },
           {
             id: "invoices",
             label: `Invoices (${bills.length})`,
           },
+          isOwner && { id: "financial", label: "Financial overview" },
           { id: "banking", label: "Banking System" },
           { id: "reports", label: "Reports" },
           isOwner && { id: "users", label: "Users & Roles" },
@@ -1850,31 +2124,81 @@
             className: "pageSection erpShell",
             "data-role": isOwner ? "owner" : "admin",
           },
-          React.createElement("h1", null, isOwner ? "Biswokarma Owner Portal" : "Biswokarma ERP"),
           React.createElement(
-            "p",
-            {
-              className: "subtext",
-            },
-            `${greetingFor()}, ${currentUser.name}. ${displayDate()}`,
+            "div",
+            { className: "dashboardHeading" },
+            React.createElement(
+              "div",
+              null,
+              React.createElement("span", { className: "eyebrow" }, isOwner ? "Owner workspace" : "Workshop operations"),
+              React.createElement("h1", null, isOwner ? "Owner dashboard" : "Admin dashboard"),
+              React.createElement(
+                "p",
+                { className: "subtext" },
+                `${greetingFor()}, ${currentUser.name}. ${displayDate()}`,
+              ),
+            ),
+            React.createElement(
+              "button",
+              {
+                className: "menuToggle",
+                type: "button",
+                "aria-label": menuOpen ? "Close navigation menu" : "Open navigation menu",
+                "aria-expanded": menuOpen,
+                onClick: () => setMenuOpen(!menuOpen),
+              },
+              React.createElement("span", null),
+              React.createElement("span", null),
+              React.createElement("span", null),
+              React.createElement("b", null, "Menu"),
+            ),
           ),
           React.createElement(
             "div",
             {
-              className: "tabRow wrap erpNav",
+              className: "dashboardLayout" + (menuOpen ? " menuOpen" : ""),
             },
-            tabs.map((t) =>
+            menuOpen &&
+              React.createElement("button", {
+                className: "sidebarScrim",
+                type: "button",
+                "aria-label": "Close navigation menu",
+                onClick: () => setMenuOpen(false),
+              }),
+            React.createElement(
+              "aside",
+              { className: "dashboardSidebar", "aria-label": "Dashboard navigation" },
+              React.createElement("div", { className: "sidebarLabel" }, "Workspace"),
+              tabs.map((t) =>
+                React.createElement(
+                  "button",
+                  {
+                    key: t.id,
+                    className: tab === t.id ? "tab active" : "tab",
+                    onClick: () => {
+                      setTab(t.id);
+                      setMenuOpen(false);
+                    },
+                  },
+                  React.createElement("span", { className: "sidebarIndicator" }),
+                  t.label,
+                ),
+              ),
               React.createElement(
-                "button",
-                {
-                  key: t.id,
-                  className: tab === t.id ? "tab active" : "tab",
-                  onClick: () => setTab(t.id),
-                },
-                t.label,
+                "div",
+                { className: "sidebarIdentity" },
+                React.createElement(GearMark, { size: 24 }),
+                React.createElement(
+                  "span",
+                  null,
+                  "Biswokarma",
+                  React.createElement("small", null, "Workshop"),
+                ),
               ),
             ),
-          ),
+            React.createElement(
+              "div",
+              { className: "dashboardContent" },
           tab === "overview" &&
             (isOwner
               ? React.createElement(OwnerDashboard, {
@@ -1901,11 +2225,6 @@
               bills,
               parts,
             }),
-          tab === "banking" && isOwner && React.createElement(BankingSystem, {
-            bills,
-            persistBills,
-            flash,
-          }),
           tab === "stock" &&
             React.createElement(Stock, {
               parts,
@@ -1996,6 +2315,8 @@
               persistAuth,
               flash,
             }),
+            ),
+          ),
         );
       }
 
@@ -2092,7 +2413,7 @@
             .filter((item) => inBucket(item.date, bucket))
             .reduce((sum, item) => sum + Number(item.total || 0), 0),
         );
-        const maxBar = Math.max(1, ...salesBars);
+        const maxBar = Math.max(1, ...salesBars, ...purchaseBars);
         const topProducts = {};
         bills.forEach((bill) =>
           (bill.items || []).forEach((item) => {
@@ -2906,7 +3227,6 @@
                 customerName: (bill.customer && bill.customer.name) || "Walk-in",
                 customerPhone: (bill.customer && bill.customer.phone) || "0000000000",
                 amount: bill.due,
-                vat: 0,
               }),
             });
             const data = await res.json();
@@ -4635,16 +4955,35 @@
             ),
           );
         const removeRow = (id) => setRows(rows.filter((r) => r.id !== id));
-        const subtotal = rows.reduce(
-          (s, r) => s + (Number(r.qty) || 0) * (Number(r.rate) || 0),
+        const grossTotal = rows.reduce(
+          (s, r) => {
+            const qty = Number(r.qty);
+            const rate = Number(r.rate);
+            const lineTotal = roundMoney(qty * rate);
+            return s + (
+              Number.isFinite(qty) &&
+              Number.isFinite(rate) &&
+              Number.isFinite(lineTotal) &&
+              qty > 0 &&
+              rate >= 0
+                ? lineTotal
+                : 0
+            );
+          },
           0,
         );
-        const vat = subtotal * VAT_RATE;
-        const total = subtotal + vat;
+        const { subtotal, vat, total } = calculateVatInclusive(grossTotal);
         const valid =
           customer.name.trim() &&
           rows.length > 0 &&
-          rows.every((r) => r.description && Number(r.qty) > 0);
+          rows.every(
+            (r) =>
+              r.description &&
+              Number.isFinite(Number(r.qty)) &&
+              Number(r.qty) > 0 &&
+              Number.isFinite(Number(r.rate)) &&
+              Number(r.rate) >= 0,
+          );
         const matches = parts
           .filter((p) => p.name.toLowerCase().includes(partQuery.toLowerCase()))
           .slice(0, 30);
@@ -4661,6 +5000,7 @@
             due: Math.max(0, total - (Number(payment.paidAmount) || 0)),
             paymentStatus:
               (Number(payment.paidAmount) || 0) >= total ? "Paid" : "Due",
+            vatInclusive: true,
             items: rows.map((r) => ({
               description: r.description,
               qty: Number(r.qty),
@@ -4819,7 +5159,7 @@
                   value: payment.paidAmount,
                   onChange: (e) =>
                     setPayment({ ...payment, paidAmount: e.target.value }),
-                  placeholder: fmt(total),
+                  placeholder: fmtExact(total),
                 }),
               ),
             ),
@@ -4870,7 +5210,7 @@
                   null,
                   React.createElement("th", null, "Description"),
                   React.createElement("th", null, "Qty"),
-                  React.createElement("th", null, "Rate"),
+                  React.createElement("th", null, "Rate (VAT incl.)"),
                   React.createElement("th", null, "Amount"),
                   React.createElement("th", null),
                 ),
@@ -4920,7 +5260,7 @@
                     React.createElement(
                       "td",
                       null,
-                      fmt((Number(r.qty) || 0) * (Number(r.rate) || 0)),
+                      fmtExact(roundMoney((Number(r.qty) || 0) * (Number(r.rate) || 0))),
                     ),
                     React.createElement(
                       "td",
@@ -4960,22 +5300,22 @@
             React.createElement(
               "div",
               null,
-              React.createElement("span", null, "Subtotal"),
-              React.createElement("span", null, fmt(subtotal)),
+              React.createElement("span", null, "Taxable amount"),
+              React.createElement("span", null, fmtExact(subtotal)),
             ),
             React.createElement(
               "div",
               null,
-              React.createElement("span", null, "VAT (13%)"),
-              React.createElement("span", null, fmt(vat)),
+              React.createElement("span", null, "VAT included (13%)"),
+              React.createElement("span", null, fmtExact(vat)),
             ),
             React.createElement(
               "div",
               {
                 className: "grandTotal",
               },
-              React.createElement("span", null, "Grand Total"),
-              React.createElement("span", null, fmt(total)),
+              React.createElement("span", null, "Total incl. VAT"),
+              React.createElement("span", null, fmtExact(total)),
             ),
           ),
           React.createElement(
@@ -5173,7 +5513,11 @@
                   React.createElement("th", null, "SN"),
                   React.createElement("th", null, "Description"),
                   React.createElement("th", null, "Qty"),
-                  React.createElement("th", null, "Rate (Rs)"),
+                  React.createElement(
+                    "th",
+                    null,
+                    bill.vatInclusive ? "Rate (VAT incl.)" : "Rate (Rs)",
+                  ),
                   React.createElement("th", null, "Amount (Rs)"),
                 ),
               ),
@@ -5192,12 +5536,12 @@
                     React.createElement(
                       "td",
                       null,
-                      it.rate.toLocaleString("en-IN"),
+                      formatMoneyAmount(it.rate),
                     ),
                     React.createElement(
                       "td",
                       null,
-                      (it.qty * it.rate).toLocaleString("en-IN"),
+                      formatMoneyAmount(roundMoney(it.qty * it.rate)),
                     ),
                   ),
                 ),
@@ -5211,22 +5555,34 @@
               React.createElement(
                 "div",
                 null,
-                React.createElement("span", null, "Subtotal"),
-                React.createElement("span", null, fmt(bill.subtotal)),
+                React.createElement(
+                  "span",
+                  null,
+                  bill.vatInclusive ? "Taxable amount" : "Subtotal",
+                ),
+                React.createElement("span", null, fmtExact(bill.subtotal)),
               ),
               React.createElement(
                 "div",
                 null,
-                React.createElement("span", null, "VAT (13%)"),
-                React.createElement("span", null, fmt(bill.vat)),
+                React.createElement(
+                  "span",
+                  null,
+                  bill.vatInclusive ? "VAT included (13%)" : "VAT (13%)",
+                ),
+                React.createElement("span", null, fmtExact(bill.vat)),
               ),
               React.createElement(
                 "div",
                 {
                   className: "grandTotal",
                 },
-                React.createElement("span", null, "Grand Total"),
-                React.createElement("span", null, fmt(bill.total)),
+                React.createElement(
+                  "span",
+                  null,
+                  bill.vatInclusive ? "Total incl. VAT" : "Grand Total",
+                ),
+                React.createElement("span", null, fmtExact(bill.total)),
               ),
             ),
             React.createElement(
@@ -6001,6 +6357,295 @@
         .ctaBand { flex-direction: column; align-items: flex-start; }
         th, td { padding: 9px 10px; }
         .invoiceHead { flex-direction: column; gap: 12px; }
+      }
+      :root {
+        --ink: #111a20;
+        --steelDark: #17232b;
+        --amber: #f4ae36;
+        --amber2: #ffd27b;
+        --rust: #d76635;
+        --paper: #0d151b;
+        --steel: #98a6af;
+        --text: #d8e0e5;
+        --app-bg: #0b1217;
+        --panel-bg: #121d24;
+        --panel-border: rgba(189, 205, 214, .13);
+      }
+      [data-theme="light"] {
+        --app-bg: #f4f6f7;
+        --panel-bg: #ffffff;
+        --panel-border: #e0e6e9;
+        --text: #26343c;
+        --steel: #6a7a84;
+      }
+      .app {
+        min-height: 100vh;
+        color: var(--text);
+        background: var(--app-bg);
+        text-transform: none;
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+        line-height: 1.5;
+      }
+      .app h1, .app h2, .app h3 {
+        color: #f2f5f6;
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+        font-weight: 700;
+        letter-spacing: -.035em;
+      }
+      [data-theme="light"] .app h1,
+      [data-theme="light"] .app h2,
+      [data-theme="light"] .app h3 { color: #17252d; }
+      main { max-width: 1440px; padding: 0 32px; }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        min-height: 76px;
+        padding: 14px max(28px, calc((100vw - 1380px) / 2));
+        background: rgba(11, 18, 23, .94);
+        border-bottom: 1px solid rgba(255,255,255,.08);
+        backdrop-filter: blur(18px);
+      }
+      .brand { font-size: 20px; letter-spacing: -.03em; }
+      .brand svg { filter: drop-shadow(0 3px 10px rgba(244,174,54,.32)); }
+      .navlinks { align-items: center; gap: 7px; }
+      .navlinks button { border-radius: 999px; padding: 9px 15px; color: #afbbc2; }
+      .navlinks button:hover { background: rgba(255,255,255,.06); color: #fff; }
+      .navlinks button.active { color: #161c20; background: var(--amber); }
+      .themeToggle { border-radius: 12px; }
+      .toast { position: fixed; top: 88px; left: 50%; transform: translateX(-50%); z-index: 60; border-radius: 12px; box-shadow: 0 14px 36px rgba(0,0,0,.3); }
+      .hero {
+        position: relative;
+        overflow: hidden;
+        gap: 50px;
+        min-height: 500px;
+        margin-top: 28px;
+        padding: clamp(36px, 6vw, 78px);
+        border: 1px solid rgba(255,255,255,.09);
+        border-radius: 28px;
+        background:
+          radial-gradient(ellipse at 80% 40%, rgba(244,174,54,.17), transparent 38%),
+          linear-gradient(125deg, #18262e 0%, #101a20 55%, #111a20 100%);
+        box-shadow: 0 32px 80px rgba(0,0,0,.24);
+      }
+      .animatedGradient { animation: none; }
+      .heroText { z-index: 1; }
+      .heroBrand { color: var(--amber); letter-spacing: .18em; }
+      .heroText h1 { max-width: 760px; color: #f4f6f7; font-size: clamp(38px, 5vw, 66px); line-height: 1.04; }
+      .heroText p { max-width: 54ch; color: #bac5cb; font-size: 17px; }
+      .heroEmail { color: var(--amber2); }
+      .heroArt { max-width: 370px; filter: drop-shadow(0 28px 40px rgba(244,174,54,.13)); }
+      .sunCoreGroup { transform-origin: center; animation: workshopSpin 28s linear infinite; }
+      @keyframes workshopSpin { to { transform: rotate(360deg); } }
+      .btnPrimary, .btnGhost { border-radius: 10px; padding: 13px 20px; }
+      .btnPrimary { color: #171a1c; background: var(--amber); box-shadow: 0 8px 22px rgba(244,174,54,.16); }
+      .btnPrimary:hover { color: #111; background: #ffc35b; transform: translateY(-2px); }
+      .btnGhost { color: #e9eef1; background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.24); }
+      .btnGhost:hover { color: #fff; background: rgba(255,255,255,.1); }
+      .services, .process { border-color: rgba(255,255,255,.1); }
+      .services h2, .process h2 { color: #edf2f4; font-size: 28px; }
+      .serviceCard, .processStep, .chartCard, .ownerList, .quickActions, .modulePanel,
+      .tableWrap, .partCard, .invoicePaper, .bulkBox, .pickerBox {
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        background: var(--panel-bg);
+        box-shadow: 0 14px 38px rgba(0,0,0,.16);
+      }
+      .serviceCard { border-left: 3px solid var(--amber); }
+      .serviceCard h3, .stepNum { color: var(--amber); }
+      .serviceCard p, .processStep p { color: #b1bec5; }
+      .processStep { padding: 20px; background: rgba(255,255,255,.025); }
+      .ctaBand { border-radius: 18px; background: linear-gradient(120deg, #1a2931, #121c22); border: 1px solid var(--panel-border); }
+      .pageSection { padding: 48px 0 68px; }
+      .pageSection h1 { font-size: clamp(30px, 4vw, 42px); }
+      .subtext { color: #9cabb4; }
+      .partsControls input, .form input, .form textarea, .billGrid input,
+      .partsControls select, .addPartForm input, .searchBar, .cellInput,
+      .moduleForm input, .moduleForm select, .compactForm input, .compactForm select,
+      .globalSearch, .dateFilter {
+        color: #e1e8ec;
+        background: #101a20;
+        border: 1px solid #34434c;
+        border-radius: 9px;
+      }
+      .partsControls input:focus, .form input:focus, .form textarea:focus,
+      .billGrid input:focus, .searchBar:focus {
+        outline: 2px solid rgba(244,174,54,.42);
+        border-color: var(--amber);
+      }
+      .partsGrid { grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 20px; }
+      .partCard {
+        display: block;
+        width: 100%;
+        padding: 0 0 18px;
+        overflow: hidden;
+        color: var(--text);
+        text-align: left;
+        cursor: pointer;
+        transition: transform .24s ease, border-color .24s ease, box-shadow .24s ease;
+      }
+      .partCard:hover, .partCard:focus-visible {
+        transform: translateY(-5px);
+        border-color: rgba(244,174,54,.6);
+        box-shadow: 0 20px 46px rgba(0,0,0,.28);
+        outline: none;
+      }
+      .partVisual {
+        position: relative;
+        display: grid;
+        min-height: 176px;
+        overflow: hidden;
+        place-items: center;
+        background:
+          radial-gradient(ellipse at 50% 65%, rgba(244,174,54,.21), transparent 50%),
+          linear-gradient(145deg, #202f38, #111a20 70%);
+      }
+      .partVisual::after { position: absolute; inset: 0; content: ""; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.04), transparent 65%); }
+      .partVisual svg { width: 100%; max-width: 390px; height: auto; filter: drop-shadow(0 14px 18px rgba(0,0,0,.26)); }
+      .partVisual img { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; object-fit: cover; }
+      .partVisualCaption { position: absolute; z-index: 2; right: 12px; bottom: 11px; color: #d0d9de; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+      .partCard h3, .partCard > p, .partCard .partTop { margin-left: 17px; margin-right: 17px; }
+      .partCard h3 { margin-top: 16px; color: #eff3f5; font-size: 17px; }
+      .partTop { margin-top: 15px; }
+      .catTag { color: #9baab2; }
+      .partPrice { color: var(--amber2); }
+      .partPrice small { margin-left: 7px; color: #95a4ac; font-size: 10px; font-weight: 500; }
+      .stock { color: #9daab1; }
+      .partMachine { color: #9daab1; }
+      .productDetail { max-width: 1120px; margin: 0 auto; }
+      .backLink { margin-bottom: 24px; padding: 8px 0; border: 0; color: #bac5cb; background: none; font: inherit; cursor: pointer; }
+      .backLink:hover { color: var(--amber2); }
+      .productDetailGrid { display: grid; grid-template-columns: minmax(0,1fr) minmax(320px,.85fr); gap: clamp(28px,5vw,64px); align-items: center; }
+      .partVisualLarge { min-height: 430px; border: 1px solid var(--panel-border); border-radius: 24px; box-shadow: 0 24px 64px rgba(0,0,0,.24); }
+      .partVisualLarge svg { max-width: 620px; }
+      .productDetailCopy h1 { margin: 8px 0 12px; font-size: clamp(34px,5vw,54px); line-height: 1.05; }
+      .productFit, .productDescription { color: #afbdc5; }
+      .productPrice { margin: 22px 0 4px; color: var(--amber2); font-size: 30px; font-weight: 750; }
+      .productPrice small { display: block; margin-top: 3px; color: #98a7af; font-size: 12px; font-weight: 500; }
+      .productAvailability { color: #86d0ac; font-size: 13px; }
+      .productAvailability.unavailable { color: #ee977f; }
+      .productDetailCopy .btnPrimary { margin: 14px 0 24px; }
+      .productFacts { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding-top: 18px; border-top: 1px solid var(--panel-border); }
+      .productFacts span, .productFacts strong { display: block; }
+      .productFacts span { color: #8d9ca5; font-size: 11px; }
+      .productFacts strong { margin-top: 5px; color: #e4eaed; font-size: 12px; }
+      .erpShell { max-width: none; padding: 35px 0 60px; }
+      .dashboardHeading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 0 0 22px; }
+      .dashboardHeading h1 { margin-top: 4px; font-size: clamp(30px,4vw,42px); }
+      .dashboardHeading .subtext { margin: 6px 0 0; }
+      .menuToggle { display: inline-flex; align-items: center; gap: 11px; padding: 11px 14px; border: 1px solid var(--panel-border); border-radius: 11px; color: #dce4e8; background: var(--panel-bg); cursor: pointer; }
+      .menuToggle > span { width: 18px; height: 2px; border-radius: 2px; background: var(--amber); }
+      .menuToggle > span:nth-child(2) { width: 14px; }
+      .menuToggle > span:nth-child(3) { width: 18px; }
+      .menuToggle b { font-size: 12px; font-weight: 600; }
+      .dashboardLayout { display: grid; grid-template-columns: minmax(0,1fr); gap: 20px; }
+      .dashboardLayout.menuOpen { grid-template-columns: 245px minmax(0,1fr); }
+      .dashboardSidebar { display: none; }
+      .dashboardLayout.menuOpen .dashboardSidebar { position: sticky; top: 96px; display: flex; min-height: 460px; max-height: calc(100vh - 116px); flex-direction: column; gap: 5px; overflow-y: auto; padding: 14px 10px; border: 1px solid var(--panel-border); border-radius: 17px; background: var(--panel-bg); }
+      .sidebarLabel { padding: 8px 12px 12px; color: #82929c; font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+      .dashboardSidebar .tab { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0; padding: 11px 12px; border: 1px solid transparent; border-radius: 9px; color: #aab7bf; text-align: left; font-size: 12px; }
+      .dashboardSidebar .tab:hover { color: #fff; background: rgba(255,255,255,.05); }
+      .dashboardSidebar .tab.active { color: #ffd27b; border-color: rgba(244,174,54,.2); background: rgba(244,174,54,.1); }
+      .sidebarIndicator { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: #586872; }
+      .dashboardSidebar .tab.active .sidebarIndicator { background: var(--amber); box-shadow: 0 0 10px rgba(244,174,54,.7); }
+      .sidebarIdentity { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 14px 11px 5px; border-top: 1px solid var(--panel-border); color: var(--amber); font-size: 12px; font-weight: 700; }
+      .sidebarIdentity small { display: block; color: #8f9da5; font-size: 10px; font-weight: 500; }
+      .dashboardContent { min-width: 0; }
+      .sidebarScrim { display: none; }
+      .chartCard, .ownerList, .quickActions, .modulePanel, .tableWrap { background: var(--panel-bg); border-color: var(--panel-border); }
+      .ownerMetric, .erpMetric { border-color: var(--panel-border); border-radius: 13px; background: linear-gradient(145deg, #17242c, #111a20); }
+      .ownerMetric strong, .erpMetric strong { color: #f0f4f6; font-family: Inter, "Segoe UI", Arial, sans-serif; font-weight: 700; }
+      .ownerMetric span, .metricLabel, .eyebrow { color: var(--amber2); }
+      .ownerMetricGrid { grid-template-columns: repeat(auto-fit, minmax(155px,1fr)); }
+      .ownerAnalyticsGrid { grid-template-columns: minmax(0,1.25fr) minmax(280px,.75fr); }
+      .ownerBars, .miniBars { border-color: rgba(255,255,255,.08); }
+      .ownerBarGroup span { width: clamp(8px,1.2vw,14px); transition: height .45s cubic-bezier(.2,.75,.3,1); }
+      .ownerListRow, .ownerAlert, .activityRow, .noticeRow, .auditRow { border-color: rgba(255,255,255,.08); }
+      .ownerList h3, .panelHeading h2, .panelHeading h3 { color: #edf2f4; }
+      .tableWrap table, .invoiceTable { color: #dce4e8; }
+      th { color: #b6c2c8; background: #18252c; }
+      td { color: #d0d9de; border-color: rgba(255,255,255,.08); }
+      .tabRow { border-color: var(--panel-border); }
+      .chip { color: #d4dde1; background: #152129; border-color: #34434c; }
+      .chip.active { color: #15191c; background: var(--amber); border-color: var(--amber); }
+      .form label, .billGrid label { color: #cad4d9; }
+      .invoicePaper { color: #202a30; }
+      .invoicePaper h2 { color: #17252d; }
+      .invoiceTable th { color: #fff; background: #18252c; }
+      .invoiceTotals { color: #28343a; }
+      .foot { margin-top: 28px; padding: 35px 24px 24px; background: #10191f; border-top: 1px solid rgba(255,255,255,.08); }
+      .footerContact h3 { color: #edf2f4; }
+      .footerContactItem { border-radius: 12px; border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.025); color: #dce4e8; }
+      [data-theme="light"] .app { color: #293840; background: var(--app-bg); }
+      [data-theme="light"] .topbar { background: rgba(255,255,255,.94); border-color: #e0e6e9; }
+      [data-theme="light"] .brand { color: #17252d; }
+      [data-theme="light"] .navlinks button { color: #4d5c64; }
+      [data-theme="light"] .navlinks button.active { color: #17252d; }
+      [data-theme="light"] .hero { background: radial-gradient(ellipse at 80% 40%, rgba(244,174,54,.18), transparent 38%), linear-gradient(125deg,#f0f4f5,#e3eaed); }
+      [data-theme="light"] .heroText h1, [data-theme="light"] .services h2, [data-theme="light"] .process h2 { color: #14232b; }
+      [data-theme="light"] .heroText p, [data-theme="light"] .processStep p { color: #53646d; }
+      [data-theme="light"] .heroEmail { color: #9b6514; }
+      [data-theme="light"] .serviceCard, [data-theme="light"] .dashboardSidebar,
+      [data-theme="light"] .chartCard, [data-theme="light"] .ownerList,
+      [data-theme="light"] .quickActions, [data-theme="light"] .modulePanel,
+      [data-theme="light"] .tableWrap, [data-theme="light"] .partCard,
+      [data-theme="light"] .bulkBox, [data-theme="light"] .pickerBox,
+      [data-theme="light"] .menuToggle { color: #293840; background: #fff; border-color: #e0e6e9; }
+      [data-theme="light"] .serviceCard p { color: #b7c2c8; }
+      [data-theme="light"] .dashboardSidebar .tab { color: #53636b; }
+      [data-theme="light"] .dashboardSidebar .tab.active { color: #81520e; background: #fff4dc; }
+      [data-theme="light"] .ownerMetric, [data-theme="light"] .erpMetric { background: #fff; }
+      [data-theme="light"] .ownerMetric strong, [data-theme="light"] .erpMetric strong,
+      [data-theme="light"] .partCard h3, [data-theme="light"] .ownerList h3,
+      [data-theme="light"] .panelHeading h2, [data-theme="light"] .panelHeading h3 { color: #17252d; }
+      [data-theme="light"] .ownerMetric span { color: #875b18; }
+      [data-theme="light"] .tableWrap table, [data-theme="light"] td { color: #35454d; }
+      [data-theme="light"] th { color: #44535b; background: #f0f4f5; }
+      [data-theme="light"] .partsControls input, [data-theme="light"] .form input,
+      [data-theme="light"] .form textarea, [data-theme="light"] .billGrid input,
+      [data-theme="light"] .addPartForm input, [data-theme="light"] .searchBar,
+      [data-theme="light"] .cellInput, [data-theme="light"] .moduleForm input,
+      [data-theme="light"] .moduleForm select, [data-theme="light"] .compactForm input,
+      [data-theme="light"] .compactForm select, [data-theme="light"] .globalSearch,
+      [data-theme="light"] .dateFilter { color: #26343c; background: #fff; border-color: #d4dde1; }
+      [data-theme="light"] .partVisual { background: radial-gradient(ellipse at 50% 65%, rgba(244,174,54,.24), transparent 50%), linear-gradient(145deg,#e6edf0,#cdd9de); }
+      [data-theme="light"] .productDetailCopy h1, [data-theme="light"] .productFacts strong { color: #17252d; }
+      [data-theme="light"] .productFit, [data-theme="light"] .productDescription { color: #52636b; }
+      [data-theme="light"] .foot { background: #e9eef0; }
+      [data-theme="light"] .footerContact h3 { color: #17252d; }
+      [data-theme="light"] .footerContactItem { color: #293840; background: #fff; border-color: #dbe3e6; }
+      @media (max-width: 900px) {
+        main { padding: 0 20px; }
+        .dashboardLayout.menuOpen { grid-template-columns: minmax(0,1fr); }
+        .dashboardLayout.menuOpen .dashboardSidebar { position: fixed; z-index: 51; top: 0; bottom: 0; left: 0; width: min(310px, 86vw); max-height: none; min-height: 100vh; border-radius: 0 18px 18px 0; box-shadow: 18px 0 48px rgba(0,0,0,.36); animation: drawerIn .22s ease-out; }
+        .dashboardLayout.menuOpen .sidebarScrim { position: fixed; z-index: 50; inset: 0; display: block; width: 100%; height: 100%; border: 0; background: rgba(3,8,11,.62); }
+        .dashboardLayout:not(.menuOpen) .dashboardSidebar { display: none; }
+        .ownerAnalyticsGrid { grid-template-columns: 1fr; }
+      }
+      @keyframes drawerIn { from { transform: translateX(-16px); opacity: .7; } to { transform: translateX(0); opacity: 1; } }
+      @media (max-width: 640px) {
+        main { padding: 0 15px; }
+        .topbar { position: relative; padding: 13px 16px; }
+        .navlinks { width: 100%; justify-content: flex-start; overflow-x: auto; }
+        .navlinks button { flex: 0 0 auto; padding: 8px 11px; font-size: 12px; }
+        .hero { min-height: 0; margin-top: 15px; padding: 32px 23px; border-radius: 20px; }
+        .heroText h1 { font-size: clamp(36px,10vw,52px); }
+        .heroArt { max-width: 250px; }
+        .pageSection { padding: 34px 0 48px; }
+        .productDetailGrid { grid-template-columns: 1fr; gap: 25px; }
+        .partVisualLarge { min-height: 275px; }
+        .productFacts { grid-template-columns: 1fr; }
+        .dashboardHeading { align-items: flex-start; }
+        .dashboardHeading .subtext { max-width: 34ch; }
+        .ownerMetricGrid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .ownerBars { gap: 6px; padding-inline: 10px; }
+        .ownerBarGroup { gap: 2px; }
+        .ownerBarGroup span { width: 8px; }
+        .ownerBarCol small { font-size: 9px; }
+        .invoicePaper { padding: 18px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
       }
       `;
 

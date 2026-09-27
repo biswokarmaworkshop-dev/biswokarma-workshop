@@ -1,0 +1,24 @@
+[
+  {
+    "id": "jcb-bucket-300",
+    "slug": "jcb-bucket-300",
+    "name": "JCB Bucket 300mm",
+    "category": "JCB Parts",
+    "price": 4500,
+    "currency": "INR",
+    "images": ["images/jcb-bucket-300-1.jpg"],
+    "description": "High strength bucket compatible with common JCB models.",
+    "specs": { "material": "hardened steel", "weight": "12kg" }
+  },
+  {
+    "id": "motorcycle-chain-420",
+    "slug": "motorcycle-chain-420",
+    "name": "Motorcycle Chain 420",
+    "category": "Motorcycle Parts",
+    "price": 700,
+    "currency": "INR",
+    "images": ["images/chain-420-1.jpg"],
+    "description": "Durable motorcycle chain with 120 links.",
+    "specs": { "length": "120 links", "type": "roller" }
+  }
+]

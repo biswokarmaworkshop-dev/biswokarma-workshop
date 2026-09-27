@@ -391,7 +391,12 @@ Sitemap: https://biswokarma-workshop-1.onrender.com/sitemap.xml`;
       response.end(content);
     });
   }
-  if (url.pathname !== "/" && url.pathname !== "/index.html")
+  const productRoute = /^\/products\/[a-z0-9-]+\/?$/i.test(url.pathname);
+  if (
+    url.pathname !== "/" &&
+    url.pathname !== "/index.html" &&
+    !productRoute
+  )
     return json(response, 404, { error: "Not found" });
   fs.readFile(htmlFile, (error, content) => {
     if (error) {
