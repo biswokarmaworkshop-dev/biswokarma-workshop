@@ -70,6 +70,7 @@
 
     <script src="/vendor/vat.js"></script>
     <script src="/vendor/catalog.js"></script>
+    <script src="/vendor/parts-story.js"></script>
     <script src="/vendor/react.production.min.js"></script>
     <script>
       /* function OwnerDashboard({ parts, inquiries, customers, suppliers, purchases,
@@ -1961,6 +1962,169 @@
         return `NPR ${Number(amount).toLocaleString("en-NP")}`;
       }
 
+      const PARTS_STORY = BiswokarmaPartsStory.chapters;
+      function PartsStory({ onExplore }) {
+        const [activeChapter, setActiveChapter] = useState(0);
+        const chapterRefs = React.useRef([]);
+        const storyRef = React.useRef(null);
+
+        useEffect(() => {
+          let frame = 0;
+          const updateChapter = () => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => {
+              if (!storyRef.current) return;
+              const center = window.innerHeight * 0.5;
+              const nearest = BiswokarmaPartsStory.nearestChapterIndex(
+                chapterRefs.current
+                  .filter(Boolean)
+                  .map((element) => element.getBoundingClientRect()),
+                center,
+              );
+              setActiveChapter((current) =>
+                current === nearest ? current : nearest,
+              );
+            });
+          };
+          window.addEventListener("scroll", updateChapter, { passive: true });
+          window.addEventListener("resize", updateChapter, { passive: true });
+          updateChapter();
+          return () => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener("scroll", updateChapter);
+            window.removeEventListener("resize", updateChapter);
+          };
+        }, []);
+
+        const chapter = PARTS_STORY[activeChapter];
+        const jumpTo = (index) => {
+          const target = chapterRefs.current[index];
+          if (!target) return;
+          const reduceMotion =
+            window.matchMedia &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          target.scrollIntoView({
+            behavior: reduceMotion ? "auto" : "smooth",
+            block: "center",
+          });
+          target.querySelector("h2")?.focus({ preventScroll: true });
+        };
+
+        return React.createElement(
+          "section",
+          {
+            className: "partsStory",
+            ref: storyRef,
+            "aria-labelledby": "parts-story-heading",
+          },
+          React.createElement(
+            "header",
+            { className: "storyIntro" },
+            React.createElement("span", { className: "storyKicker" }, "Biswokarma Workshop · JCB parts"),
+            React.createElement("h1", { id: "parts-story-heading" }, "Parts for the work ahead."),
+            React.createElement("p", null, "A field guide to the systems that keep your machine moving. Scroll to explore each chapter; move back up to retrace it."),
+            React.createElement("span", { className: "storyScrollCue", "aria-hidden": "true" }, "SCROLL TO EXPLORE ↓"),
+          ),
+          React.createElement(
+            "div",
+            { className: "storyJourney" },
+            React.createElement(
+              "aside",
+              { className: "storyStage" },
+              React.createElement(
+                "div",
+                { className: "storyStageTopline" },
+                React.createElement("span", null, "SYSTEMS / 03DX"),
+                React.createElement("span", null, `${String(activeChapter + 1).padStart(2, "0")} — 08`),
+              ),
+              React.createElement(
+                "div",
+                {
+                  className: `storySchematic schematic-${chapter.id}`,
+                  "aria-hidden": "true",
+                },
+                React.createElement("span", { className: "schematicGrid" }),
+                React.createElement("span", { className: "schematicOrbit orbitOne" }),
+                React.createElement("span", { className: "schematicOrbit orbitTwo" }),
+                React.createElement("span", { className: "schematicCore" }, chapter.number),
+                React.createElement("span", { className: "schematicCross crossOne" }),
+                React.createElement("span", { className: "schematicCross crossTwo" }),
+                React.createElement("span", { className: "schematicCoordinates" }, "28°00′N 84°38′E"),
+              ),
+              React.createElement("span", { className: "storyStageLabel" }, chapter.metric),
+              React.createElement("h2", { className: "storyStageTitle" }, chapter.title),
+              React.createElement("p", { className: "storyStageStatement" }, chapter.statement),
+              React.createElement(
+                "div",
+                { className: "storyProgressTrack", role: "progressbar", "aria-label": "Parts story progress", "aria-valuemin": 1, "aria-valuemax": PARTS_STORY.length, "aria-valuenow": activeChapter + 1 },
+                React.createElement("span", { style: { width: `${((activeChapter + 1) / PARTS_STORY.length) * 100}%` } }),
+              ),
+              React.createElement(
+                "div",
+                { className: "storyChapterNav", "aria-label": "Parts story chapters" },
+                PARTS_STORY.map((item, index) =>
+                  React.createElement(
+                    "button",
+                    {
+                      key: item.id,
+                      type: "button",
+                      className: index === activeChapter ? "storyDot is-active" : "storyDot",
+                      "aria-label": `Chapter ${index + 1}: ${item.title}`,
+                      "aria-current": index === activeChapter ? "step" : undefined,
+                      onClick: () => jumpTo(index),
+                    },
+                    React.createElement("span", null, item.number),
+                  ),
+                ),
+              ),
+            ),
+            React.createElement(
+              "div",
+              { className: "storyChapters" },
+              PARTS_STORY.map((item, index) =>
+                React.createElement(
+                  "article",
+                  {
+                    className: index === activeChapter ? "storyChapter is-active" : "storyChapter",
+                    key: item.id,
+                    ref: (element) => {
+                      chapterRefs.current[index] = element;
+                    },
+                    "aria-labelledby": `story-chapter-${item.id}`,
+                  },
+                  React.createElement(
+                    "div",
+                    { className: "chapterMeta" },
+                    React.createElement("span", null, `FIELD NOTE / ${item.number}`),
+                    React.createElement("span", null, "JCB 3DX · 444"),
+                  ),
+                  React.createElement("h2", { id: `story-chapter-${item.id}`, tabIndex: -1 }, item.title),
+                  React.createElement("p", { className: "chapterStatement" }, item.statement),
+                  React.createElement("p", { className: "chapterDetail" }, item.detail),
+                  React.createElement(
+                    "ul",
+                    { className: "chapterSystems", "aria-label": "Catalog references in this chapter" },
+                    item.systems.map((system) =>
+                      React.createElement("li", { key: system }, system),
+                    ),
+                  ),
+                  React.createElement(
+                    "button",
+                    {
+                      type: "button",
+                      className: "chapterExplore",
+                      onClick: () => onExplore(item.productIds),
+                    },
+                    "Explore these parts",
+                    React.createElement("span", { "aria-hidden": "true" }, " ↘"),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
       function MarketplaceParts({
         products,
         loading,
@@ -1977,6 +2141,7 @@
           minimumPrice: "",
           maximumPrice: "",
           inStock: false,
+          productIds: null,
         });
         const models = Array.from(
           new Set(products.flatMap((product) => product.compatibleModels || [])),
@@ -1989,9 +2154,42 @@
         const update = (key) => (event) =>
           setFilters({
             ...filters,
+            productIds: null,
             [key]:
               key === "inStock" ? event.target.checked : event.target.value,
           });
+        const resetFilters = () =>
+          setFilters({
+            query: "",
+            model: "",
+            category: "",
+            brand: "",
+            minimumPrice: "",
+            maximumPrice: "",
+            inStock: false,
+            productIds: null,
+          });
+        const exploreChapter = (productIds) => {
+          setFilters({
+            query: "",
+            model: "",
+            category: "",
+            brand: "",
+            minimumPrice: "",
+            maximumPrice: "",
+            inStock: false,
+            productIds,
+          });
+          const reduceMotion =
+            window.matchMedia &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          window.setTimeout(() => {
+            document.querySelector(".catalogLayout")?.scrollIntoView({
+              behavior: reduceMotion ? "auto" : "smooth",
+              block: "start",
+            });
+          }, 0);
+        };
         if (loading) {
           return React.createElement(
             "section",
@@ -2010,19 +2208,16 @@
         return React.createElement(
           "section",
           { className: "pageSection marketplace" },
+          React.createElement(PartsStory, { onExplore: exploreChapter }),
           React.createElement(
             "div",
-            { className: "marketplaceHeading" },
+            { className: "marketplaceHeading catalogHeading" },
             React.createElement(
               "div",
               null,
-              React.createElement("span", { className: "marketplaceEyebrow" }, "JCB parts · Gorkha, Nepal"),
-              React.createElement("h1", null, "Find the right part"),
-              React.createElement(
-                "p",
-                null,
-                "Search the JCB 3DX and 444 parts catalog. Check exact fitment, price and availability with our workshop before ordering.",
-              ),
+              React.createElement("span", { className: "marketplaceEyebrow" }, "Biswokarma Workshop · Gorkha, Nepal"),
+              React.createElement("h2", null, "Search the parts catalog"),
+              React.createElement("p", null, "Filter catalog and saved workshop-inventory references by name, fitment, category, supplier brand or price."),
             ),
             React.createElement(
               "div",
@@ -2127,16 +2322,7 @@
                 {
                   className: "filterReset",
                   type: "button",
-                  onClick: () =>
-                    setFilters({
-                      query: "",
-                      model: "",
-                      category: "",
-                      brand: "",
-                      minimumPrice: "",
-                      maximumPrice: "",
-                      inStock: false,
-                    }),
+                  onClick: resetFilters,
                 },
                 "Clear filters",
               ),
@@ -7297,6 +7483,116 @@
         text-transform: none;
         font-family: Inter, "Segoe UI", Arial, sans-serif;
       }
+      .partsStory {
+        position: relative;
+        isolation: isolate;
+        overflow: clip;
+        margin: -48px calc(50% - 50vw) 70px;
+        padding: clamp(38px, 6vw, 82px) max(24px, calc((100vw - 1320px) / 2));
+        color: #f1f3f2;
+        background:
+          radial-gradient(ellipse at 79% 6%, rgba(222,170,35,.11), transparent 35%),
+          linear-gradient(155deg,#111619 0%,#090c0e 62%,#101619 100%);
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+        text-transform: none;
+      }
+      .partsStory::before {
+        position: absolute;
+        z-index: -1;
+        inset: 0;
+        border-block: 1px solid rgba(255,255,255,.07);
+        background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+        background-size: 48px 48px;
+        content: "";
+        mask-image: linear-gradient(to bottom, transparent, #000 13%, #000 88%, transparent);
+        pointer-events: none;
+      }
+      .storyIntro { max-width: 850px; min-height: 58svh; display: flex; flex-direction: column; justify-content: center; padding: 34px 0; }
+      .storyKicker, .storyStageTopline, .chapterMeta, .storyStageLabel {
+        color: #c9a84f;
+        font-size: 10px;
+        font-weight: 720;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+      }
+      .storyIntro h1 {
+        max-width: 800px;
+        margin: 18px 0;
+        color: #f4f3ed;
+        font: 650 clamp(42px, 7.2vw, 94px)/.98 Inter, "Segoe UI", Arial, sans-serif;
+        letter-spacing: -.065em;
+        text-transform: none;
+      }
+      .storyIntro p { max-width: 540px; margin: 0; color: #a6afb2; font-size: 15px; line-height: 1.7; }
+      .storyScrollCue { margin-top: 44px; color: #c9a84f; font-size: 9px; letter-spacing: .18em; }
+      .storyJourney { display: grid; grid-template-columns: minmax(0,.91fr) minmax(330px,.72fr); align-items: start; gap: clamp(42px, 9vw, 150px); }
+      .storyStage {
+        position: sticky;
+        top: 20px;
+        display: flex;
+        min-height: min(740px,calc(100svh - 40px));
+        flex-direction: column;
+        justify-content: center;
+        padding: 28px;
+        border: 1px solid rgba(230,235,230,.17);
+        border-radius: 2px;
+        background: linear-gradient(145deg,rgba(33,41,43,.97),rgba(12,16,17,.97) 74%);
+        box-shadow: 0 26px 72px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.05);
+      }
+      .storyStageTopline { display: flex; justify-content: space-between; gap: 12px; color: #849197; font-size: 9px; }
+      .storySchematic {
+        position: relative;
+        display: grid;
+        min-height: clamp(190px, 31vh, 310px);
+        margin: 24px 0 26px;
+        overflow: hidden;
+        place-items: center;
+        border: 1px solid rgba(230,235,230,.12);
+        background:
+          radial-gradient(ellipse at center,rgba(219,173,55,.13),transparent 46%),
+          linear-gradient(145deg,rgba(255,255,255,.027),transparent 58%);
+      }
+      .schematicGrid { position: absolute; inset: 0; opacity: .48; background-image: linear-gradient(rgba(220,229,224,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(220,229,224,.07) 1px,transparent 1px); background-size: 24px 24px; mask-image: radial-gradient(ellipse, #000, transparent 78%); }
+      .schematicOrbit { position: absolute; width: min(64%,240px); aspect-ratio: 1; border: 1px solid rgba(226,187,82,.4); border-radius: 50%; transition: transform .45s ease, border-radius .45s ease, width .45s ease; }
+      .orbitOne { transform: rotate(28deg) scaleX(.82); }
+      .orbitTwo { width: min(47%,178px); border-color: rgba(231,237,228,.3); transform: rotate(-36deg) scaleY(.72); }
+      .schematicCore { z-index: 1; display: grid; width: 58px; aspect-ratio: 1; place-items: center; border: 1px solid #d6b757; border-radius: 50%; background: #161c1d; color: #f0d98c; font-size: 12px; font-weight: 700; box-shadow: 0 0 44px rgba(224,183,60,.14); }
+      .schematicCross { position: absolute; width: min(76%,330px); height: 1px; background: linear-gradient(90deg,transparent,rgba(221,190,112,.53),transparent); transform: rotate(32deg); }
+      .crossTwo { transform: rotate(-32deg); background: linear-gradient(90deg,transparent,rgba(213,222,220,.32),transparent); }
+      .schematicCoordinates { position: absolute; right: 12px; bottom: 10px; color: #798589; font: 9px/1.4 ui-monospace,Consolas,monospace; letter-spacing: .08em; }
+      .schematic-engine .orbitOne { border-radius: 22%; transform: rotate(45deg) scale(.84); }
+      .schematic-filters .orbitOne { width: min(70%,260px); border-radius: 3px; transform: rotate(0) scaleY(.67); }
+      .schematic-transmission .orbitTwo { border-radius: 8px; transform: rotate(-40deg) scale(.7); }
+      .schematic-undercarriage .orbitOne { width: min(81%,290px); aspect-ratio: 1.8; border-radius: 50%; transform: rotate(0); }
+      .schematic-attachments .orbitOne { width: min(73%,270px); aspect-ratio: 1.5; border-radius: 2px; transform: rotate(-25deg); }
+      .schematic-electrical .orbitTwo { width: min(36%,140px); border-radius: 0; transform: rotate(45deg) scaleY(.42); }
+      .schematic-seals .orbitOne { border-radius: 38%; transform: rotate(-20deg) scale(.72); }
+      .storyStageLabel { color: #849197; font-size: 9px; }
+      .storyStageTitle { margin: 9px 0 7px; color: #f3f2eb; font: 620 clamp(27px,3vw,42px)/1.04 Inter,"Segoe UI",Arial,sans-serif; letter-spacing: -.04em; text-transform: none; }
+      .storyStageStatement { min-height: 25px; margin: 0; color: #a6afb2; font-size: 13px; }
+      .storyProgressTrack { height: 2px; margin-top: 27px; overflow: hidden; background: rgba(255,255,255,.13); }
+      .storyProgressTrack span { display: block; height: 100%; background: #d4b344; transition: width .25s ease; }
+      .storyChapterNav { display: flex; justify-content: space-between; gap: 6px; margin-top: 14px; }
+      .storyDot { display: grid; width: 31px; height: 31px; flex: 0 0 31px; place-items: center; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; background: transparent; color: #849197; font: inherit; cursor: pointer; }
+      .storyDot span { font-size: 8px; }
+      .storyDot:hover, .storyDot.is-active { border-color: #d4b344; background: rgba(212,179,68,.12); color: #f1d783; }
+      .storyDot:focus-visible, .chapterExplore:focus-visible { outline: 3px solid #f1d783; outline-offset: 4px; }
+      .storyChapters { min-width: 0; }
+      .storyChapter { display: flex; min-height: 76svh; flex-direction: column; justify-content: center; padding: 36px 0; opacity: .4; transition: opacity .3s ease; }
+      .storyChapter.is-active { opacity: 1; }
+      .chapterMeta { display: flex; justify-content: space-between; gap: 10px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,.14); color: #829096; font-size: 8px; }
+      .storyChapter h2 { margin: 25px 0 12px; color: #f1f1eb; font: 610 clamp(35px,4.3vw,60px)/1 Inter,"Segoe UI",Arial,sans-serif; letter-spacing: -.05em; text-transform: none; }
+      .chapterStatement { margin: 0 0 14px; color: #e1c66f; font-size: clamp(17px,1.7vw,22px); letter-spacing: -.02em; }
+      .chapterDetail { max-width: 500px; margin: 0; color: #a5afb2; font-size: 13px; line-height: 1.75; }
+      .chapterSystems { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 16px; margin: 23px 0 27px; padding: 0; list-style: none; }
+      .chapterSystems li { padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.11); color: #d9ddda; font-size: 11px; }
+      .chapterSystems li::before { margin-right: 9px; color: #d4b344; content: "↳"; }
+      .chapterExplore { align-self: flex-start; padding: 11px 0; border: 0; border-bottom: 1px solid #bc9d47; background: none; color: #f0d782; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+      .storyHeadingFallback { display: none; }
+      .catalogHeading { scroll-margin-top: 22px; margin: 0 0 24px; padding-top: 12px; }
+      .catalogHeading h2 { margin: 8px 0; font-size: clamp(28px,3vw,36px); }
+      .catalogHeading p { max-width: 680px; margin: 0; color: var(--market-muted); line-height: 1.6; }
+      .catalogLayout { scroll-margin-top: 24px; }
       .marketplace h1, .marketplace h2, .marketplace h3 {
         color: var(--market-ink);
         font-family: Inter, "Segoe UI", Arial, sans-serif;
@@ -7409,11 +7705,36 @@
       [data-theme="dark"] .marketplace .marketProductBody h2,
       [data-theme="dark"] .marketplace .productSpecifications h2 { color: #172a32; }
       @media (max-width: 900px) {
+        .storyJourney { grid-template-columns: minmax(0,.9fr) minmax(280px,.8fr); gap: 36px; }
+        .storyStage { padding: 21px; }
+        .storyDot { width: 27px; height: 27px; flex-basis: 27px; }
         .catalogLayout { grid-template-columns: 1fr; }
         .catalogFilters { position: static; grid-template-columns: repeat(2,minmax(0,1fr)); }
         .catalogFilters h2, .catalogFilters .priceRange, .catalogFilters .filterReset { grid-column: 1 / -1; }
       }
       @media (max-width: 640px) {
+        .partsStory { margin-top: -34px; padding: 40px 18px 38px; }
+        .storyIntro { min-height: 54svh; min-height: 54dvh; }
+        .storyIntro h1 { font-size: clamp(42px,14vw,70px); }
+        .storyIntro p { font-size: 13px; }
+        .storyScrollCue { margin-top: 28px; }
+        .storyJourney { display: flex; flex-direction: column; gap: 0; }
+        .storyStage { position: sticky; z-index: 3; top: 0; order: 0; min-height: 0; width: 100%; padding: 12px 14px; border-inline: 0; border-radius: 0 0 10px 10px; }
+        .storySchematic { min-height: 78px; margin: 8px 0; }
+        .storyStageTopline { font-size: 8px; }
+        .storyStageTitle { margin: 5px 0 3px; font-size: 22px; }
+        .storyStageStatement { font-size: 11px; }
+        .storyStageLabel { font-size: 8px; }
+        .storyProgressTrack { margin-top: 10px; }
+        .storyChapterNav { margin-top: 7px; }
+        .storyDot { width: 30px; height: 30px; flex-basis: 30px; }
+        .storyChapters { display: grid; width: 100%; }
+        .storyChapter { min-height: 68svh; min-height: 68dvh; padding: 46px 4px; opacity: .74; }
+        .storyChapter.is-active { opacity: 1; }
+        .storyChapter h2 { margin-top: 20px; font-size: clamp(36px,10vw,48px); }
+        .chapterDetail { font-size: 12px; }
+        .chapterSystems { gap: 0 10px; }
+        .chapterSystems li { font-size: 10px; }
         .marketplaceHeading { align-items: flex-start; flex-direction: column; }
         .catalogCount { display: flex; align-items: center; gap: 8px; }
         .catalogFilters { grid-template-columns: 1fr; }

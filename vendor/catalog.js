@@ -70,6 +70,11 @@
       ]
         .join(" ")
         .toLowerCase();
+      if (
+        Array.isArray(filters.productIds) &&
+        !filters.productIds.includes(product.id)
+      )
+        return false;
       if (query && !searchable.includes(query)) return false;
       if (filters.model && !(product.compatibleModels || []).includes(filters.model))
         return false;

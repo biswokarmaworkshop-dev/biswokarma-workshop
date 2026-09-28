@@ -38,4 +38,11 @@ test("serves the catalog API, product routes and catalog browser asset", async (
   assert.equal(assetResponse.status, 200);
   assert.match(assetResponse.headers.get("content-type"), /javascript/);
   assert.match(await assetResponse.text(), /BiswokarmaCatalog/);
+
+  const storyResponse = await fetch(`${origin}/vendor/parts-story.js`);
+  assert.equal(storyResponse.status, 200);
+  assert.match(storyResponse.headers.get("content-type"), /javascript/);
+  const storyScript = await storyResponse.text();
+  assert.match(storyScript, /title: "Hydraulics"/);
+  assert.match(storyScript, /nearestChapterIndex/);
 });

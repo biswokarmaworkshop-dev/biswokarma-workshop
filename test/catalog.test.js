@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const products = require("../data/jcb-parts.json");
 const {
   addToCart,
@@ -10,6 +12,7 @@ const {
   productSlug,
   verifiedImages,
 } = require("../vendor/catalog");
+const { chapters, nearestChapterIndex } = require("../vendor/parts-story");
 
 const requestedNames = [
   "JCB 3DX Bucket Teeth",
@@ -97,6 +100,59 @@ test("search matches exact names, part numbers and model/category/brand filters"
     4,
   );
   assert.deepEqual(filterProducts(products, { inStock: true }), []);
+  assert.deepEqual(
+    filterProducts(products, { productIds: ["jcb3dx-001", "jcb3dx-002"] }).map(
+      (product) => product.id,
+    ),
+    ["jcb3dx-001", "jcb3dx-002"],
+  );
+});
+
+test("parts story has eight complete chapters linked to matching catalog records", () => {
+  assert.deepEqual(
+    chapters.map((chapter) => chapter.title),
+    [
+      "Hydraulics",
+      "Engine",
+      "Filters",
+      "Transmission",
+      "Undercarriage",
+      "Bucket & attachments",
+      "Electrical",
+      "Seals & repair kits",
+    ],
+  );
+  const ids = new Set(products.map((product) => product.id));
+  for (const chapter of chapters) {
+    assert.ok(chapter.detail && chapter.statement && chapter.systems.length);
+    assert.ok(chapter.productIds.length > 0);
+    assert.ok(chapter.productIds.every((id) => ids.has(id)), chapter.title);
+  }
+});
+
+test("scroll chapter selection follows the nearest chapter in either direction", () => {
+  const positions = [
+    { top: -200, height: 100 },
+    { top: 0, height: 100 },
+    { top: 200, height: 100 },
+  ];
+  assert.equal(nearestChapterIndex(positions, 20), 1);
+  assert.equal(nearestChapterIndex(positions, 280), 2);
+  assert.equal(nearestChapterIndex(positions, 20), 1);
+  assert.equal(nearestChapterIndex([], 20), 0);
+});
+
+test("parts story uses reversible native scrolling with accessible mobile and motion fallbacks", () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
+    "utf8",
+  );
+  assert.ok(html.includes('addEventListener("scroll", updateChapter, { passive: true })'));
+  assert.ok(html.includes("prefers-reduced-motion: reduce"));
+  assert.ok(html.includes(".storyStage { position: sticky; z-index: 3; top: 0"));
+  assert.ok(html.includes('"storyDot is-active"'));
+  assert.ok(html.includes('"aria-current": index === activeChapter ? "step"'));
+  assert.ok(!/setInterval\(|autoplay/i.test(html));
 });
 
 test("product routes resolve to the intended structured record", () => {
