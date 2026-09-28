@@ -52,3 +52,17 @@ test("catalog item links open their own product detail route", () => {
   assert.ok(html.includes("window.history.pushState(null, \"\", `/products/${slug}`)"));
   assert.ok(html.includes('view === "product"'));
 });
+
+test("catalog browsing separates listing sources and adapts filters for mobile", () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
+    "utf8",
+  );
+  assert.ok(html.includes('"Listing source"'));
+  assert.ok(html.includes('"Saved workshop inventory"'));
+  assert.ok(html.includes('"Unverified demo references"'));
+  assert.ok(html.includes("Catalog.listingSourceLabel(product)"));
+  assert.ok(html.includes(".demoSource"));
+  assert.ok(html.includes(".inventorySource"));
+  assert.ok(html.includes("@media (max-width: 380px)"));
+});
