@@ -66,3 +66,14 @@ test("catalog browsing separates listing sources and adapts filters for mobile",
   assert.ok(html.includes(".inventorySource"));
   assert.ok(html.includes("@media (max-width: 380px)"));
 });
+
+test("saved inventory illustrations are derived for display without changing stored parts", () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
+    "utf8",
+  );
+  assert.ok(html.includes("Catalog.findInventoryIllustration(part, inventoryIllustrations)"));
+  assert.ok(html.includes("Catalog.inventoryListing("));
+  assert.ok(html.includes('className: "productPhotography"'));
+  assert.ok(html.includes("image.caption ||"));
+});
