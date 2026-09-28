@@ -20,6 +20,12 @@
     return `${slugify(product.name) || "part"}-${id}`;
   }
 
+  function listingSourceLabel(product) {
+    return product.catalogSource === "workshop_inventory"
+      ? "Saved workshop record · confirm details"
+      : "Unverified demo reference";
+  }
+
   function findProductBySlug(products, slug) {
     return products.find((product) => productSlug(product) === slug) || null;
   }
@@ -48,7 +54,7 @@
           : stock > 0
             ? "in_stock"
             : "out_of_stock",
-      compatibleModels: [String(part.machine || "Confirm with workshop")],
+      compatibleModels: part.machine ? [String(part.machine)] : [],
       description: `Existing workshop inventory listing for ${String(part.name || "this part")}. Confirm supplier brand, exact fitment and current price with the workshop.`,
       specs: { inventoryStatus: "Existing workshop inventory record" },
       images: [],
@@ -127,6 +133,7 @@
         !filters.productIds.includes(product.id)
       )
         return false;
+      if (filters.source && product.catalogSource !== filters.source) return false;
       if (query && !searchable.includes(query)) return false;
       if (filters.model && !(product.compatibleModels || []).includes(filters.model))
         return false;
@@ -205,6 +212,7 @@
     filterProducts,
     findProductBySlug,
     inventoryListing,
+    listingSourceLabel,
     productSlug,
     verifiedImages,
   };

@@ -375,85 +375,7 @@
 
       /* ================= seed data ================= */
       function seedParts() {
-        const categories = [
-          "Hydraulics",
-          "Engine",
-          "Undercarriage",
-          "Electrical",
-          "Attachments",
-          "Transmission",
-          "Cooling System",
-          "Cabin & Body",
-        ];
-        const machines = [
-          "JCB 3DX",
-          "JCB 4DX",
-          "JCB JS130",
-          "JCB JS205",
-          "JCB 444 Engine",
-          "Universal",
-          "Komatsu PC200",
-          "Tata Hitachi EX200",
-        ];
-        const names = [
-          "Hydraulic Pump Assembly",
-          "Main Control Valve",
-          "Boom Cylinder Seal Kit",
-          "Bucket Cylinder",
-          'Hydraulic Hose 1/2"',
-          "Piston Ring Kit",
-          "Fuel Injector",
-          "Cylinder Head Gasket",
-          "Water Pump",
-          "Radiator Assembly",
-          "Fan Belt",
-          "Air Filter",
-          "Oil Filter",
-          "Fuel Filter",
-          "Track Roller",
-          "Idler Wheel",
-          "Track Chain",
-          "Sprocket",
-          "Bucket Teeth (Set of 5)",
-          "Side Cutting Edge",
-          "Alternator 12V 90A",
-          "Starter Motor",
-          "Battery 12V 88Ah",
-          "Wiring Harness",
-          "Headlight Assembly",
-          "Clutch Plate",
-          "Gear Box Oil Seal",
-          "Drive Shaft",
-          "Universal Joint",
-          "Brake Shoe Set",
-          "Operator Seat",
-          "Cabin Door Glass",
-          "Wiper Motor",
-          "Steering Cylinder",
-          "Swing Motor",
-          "Travel Motor",
-          "Pilot Valve",
-          "Solenoid Valve",
-          "Pressure Gauge",
-          "Grease Gun Nozzle",
-        ];
-        const parts = [];
-        for (let i = 0; i < 320; i++) {
-          const name =
-            names[i % names.length] +
-            (i >= names.length
-              ? ` (Batch ${Math.floor(i / names.length) + 1})`
-              : "");
-          parts.push({
-            id: uid(),
-            name,
-            category: categories[i % categories.length],
-            machine: machines[i % machines.length],
-            price: 500 + ((i * 137) % 60000),
-            stock: (i * 7) % 45,
-          });
-        }
-        return parts;
+        return [];
       }
       const SERVICES = [
         {
@@ -2245,6 +2167,7 @@
           query: "",
           model: "",
           category: "",
+          source: "",
           productIds: null,
         });
         const models = Array.from(
@@ -2265,6 +2188,7 @@
             query: "",
             model: "",
             category: "",
+            source: "",
             productIds: null,
           });
         const exploreChapter = (productIds) => {
@@ -2272,6 +2196,7 @@
             query: "",
             model: "",
             category: "",
+            source: "",
             productIds: Array.isArray(productIds) ? productIds : null,
           });
           const reduceMotion =
@@ -2323,7 +2248,7 @@
           React.createElement(
             "div",
             { className: "catalogNotice", role: "note" },
-            "Catalog entries are unverified demo references, not confirmed fitments or supplier stock. Some cards show generated illustrations for reference only; each is labeled and is not the exact product or an OEM photo. Demo prices and specifications are not provided; request a quote and confirm the machine serial number with the workshop. Saved workshop inventory is shown separately using its recorded values. No genuine supplier/OEM photos are available yet.",
+            "Demo references do not confirm fitment, supplier, stock, price or specifications. Generated illustrations are labeled and are not the exact product or OEM photos. Saved workshop records are shown separately, but are not independently verified; confirm current price, stock, supplier and fitment with the workshop. No genuine supplier/OEM photos are available yet.",
           ),
           React.createElement(
             "div",
@@ -2354,6 +2279,18 @@
                   models.map((model) =>
                     React.createElement("option", { key: model, value: model }, model),
                   ),
+                ),
+              ),
+              React.createElement(
+                "label",
+                null,
+                "Listing source",
+                React.createElement(
+                  "select",
+                  { value: filters.source, onChange: update("source") },
+                  React.createElement("option", { value: "" }, "All listing types"),
+                  React.createElement("option", { value: "workshop_inventory" }, "Saved workshop inventory"),
+                  React.createElement("option", { value: "demo_catalog" }, "Unverified demo references"),
                 ),
               ),
               React.createElement(
@@ -2402,7 +2339,21 @@
                         React.createElement(
                           "div",
                           { className: "marketProductBody" },
-                          React.createElement("span", { className: "productCategory" }, product.category),
+                          React.createElement(
+                            "div",
+                            { className: "productBadges" },
+                            React.createElement("span", { className: "productCategory" }, product.category),
+                            React.createElement(
+                              "span",
+                              {
+                                className:
+                                  product.catalogSource === "workshop_inventory"
+                                    ? "listingSource inventorySource"
+                                    : "listingSource demoSource",
+                              },
+                              Catalog.listingSourceLabel(product),
+                            ),
+                          ),
                           React.createElement(
                             "h2",
                             null,
@@ -2429,14 +2380,14 @@
                               ? "Availability: confirm with workshop"
                               : product.stock > 0
                                 ? `${product.stock} in workshop stock · confirm before ordering`
-                                : "Currently out of stock",
+                                : "Recorded out of stock · confirm with workshop",
                           ),
                           product.catalogSource === "workshop_inventory" && product.priceNpr > 0
                             ? React.createElement(
                                 React.Fragment,
                                 null,
                                 React.createElement("strong", { className: "marketPrice" }, formatNpr(product.priceNpr)),
-                                React.createElement("span", { className: "priceDisclaimer" }, "Stored workshop price · VAT included"),
+                                React.createElement("span", { className: "priceDisclaimer" }, "Saved workshop price · VAT included; confirm current price"),
                               )
                             : React.createElement("strong", { className: "marketPrice" }, "Request a quote"),
                           React.createElement(
@@ -2526,6 +2477,13 @@
               React.createElement("p", { className: "productBrand" }, `Supplier brand: ${product.brand}`),
               React.createElement(
                 "p",
+                { className: "listingDetailSource" },
+                product.catalogSource === "workshop_inventory"
+                  ? "Saved workshop inventory record · not independently verified; confirm all details before ordering."
+                  : "Unverified demo reference · no confirmed supplier, fitment, specifications, price or stock.",
+              ),
+              React.createElement(
+                "p",
                 { className: "productPrice" },
                 product.catalogSource === "workshop_inventory" && product.priceNpr > 0
                   ? formatNpr(product.priceNpr)
@@ -2545,7 +2503,7 @@
                   ? "Stock quantity not connected · confirm availability with the workshop"
                   : product.stock > 0
                     ? `${product.stock} recorded in workshop stock · confirm before ordering`
-                    : "Currently out of stock",
+                    : "Recorded out of stock · confirm with the workshop",
               ),
               React.createElement("p", { className: "productDescription" }, product.description),
               React.createElement(
@@ -7704,7 +7662,7 @@
       .catalogLayout { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; gap: 24px; }
       .catalogFilters { position: sticky; top: 16px; display: grid; gap: 15px; padding: 18px; border: 1px solid var(--market-line); border-radius: 12px; background: #fff; }
       .catalogFilters h2 { margin-bottom: 2px; font-size: 17px; }
-      .catalogFilters > label, .priceRange label { display: grid; gap: 6px; color: #475861; font-size: 12px; font-weight: 650; }
+      .catalogFilters > label, .priceRange label { display: grid; min-width: 0; gap: 6px; color: #475861; font-size: 12px; font-weight: 650; }
       .catalogFilters input:not([type="checkbox"]), .catalogFilters select, .quantityField input, .cartLineControls input { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #cbd5da; border-radius: 7px; background: #fff; color: #1b2b32; font: inherit; font-size: 13px; text-transform: none; }
       .catalogFilters input:focus-visible, .catalogFilters select:focus-visible, .quantityField input:focus-visible, .cartLineControls input:focus-visible { outline: 3px solid rgba(208,145,37,.35); outline-offset: 1px; border-color: #b87814; }
       .filterReset, .productDetailsLink, .marketplaceHelp button { padding: 8px 0; border: 0; background: none; color: #80540f; font: inherit; font-size: 12px; font-weight: 700; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
@@ -7721,7 +7679,12 @@
       .productPhotographyLarge .photoUnavailable { min-height: 390px; border: 1px solid var(--market-line); border-radius: 14px; font-size: 13px; }
       .productPhotographyLarge .productPhoto img { min-height: 390px; }
       .marketProductBody { display: flex; min-height: 260px; flex-direction: column; align-items: flex-start; padding: 16px; }
+      .productBadges { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
       .productCategory { color: #7d5b27; font-size: 10px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+      .listingSource { display: inline-flex; max-width: 100%; padding: 4px 7px; border: 1px solid transparent; border-radius: 999px; font-size: 9px; font-weight: 700; line-height: 1.35; }
+      .demoSource { border-color: #ead9b8; background: #fff8eb; color: #765216; }
+      .inventorySource { border-color: #cbded3; background: #eff7f1; color: #365c42; }
+      .listingDetailSource { padding: 10px 12px; border-left: 3px solid #c18523; background: #fff8eb; color: #5c4c2e; font-size: 12px; line-height: 1.5; }
       .marketProductBody h2 { margin: 7px 0 5px; font-size: 17px; line-height: 1.3; }
       .marketProductBody h2 a { color: inherit; text-decoration: none; }
       .marketProductBody h2 a:hover { color: #8e5d0e; text-decoration: underline; text-underline-offset: 3px; }
@@ -7809,8 +7772,8 @@
         .chapterSystems li { font-size: 10px; }
         .marketplaceHeading { align-items: flex-start; flex-direction: column; }
         .catalogCount { display: flex; align-items: center; gap: 8px; }
-        .catalogFilters { grid-template-columns: 1fr; }
-        .catalogFilters h2, .catalogFilters .filterReset { grid-column: auto; }
+        .catalogFilters { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .catalogFilters h2, .catalogFilters .filterReset, .catalogFilters > label:first-of-type { grid-column: 1 / -1; }
         .marketProductGrid { grid-template-columns: 1fr; }
         .marketProductBody { min-height: 250px; }
         .productPhotographyLarge .photoUnavailable { min-height: 250px; }
@@ -7818,6 +7781,10 @@
         .detailActions { align-items: stretch; }
         .detailActions .btnPrimary, .detailActions .btnGhost { flex: 1 1 100%; }
         .cartDialog { padding: 18px; }
+      }
+      @media (max-width: 380px) {
+        .catalogFilters { grid-template-columns: 1fr; }
+        .catalogFilters h2, .catalogFilters .filterReset, .catalogFilters > label:first-of-type { grid-column: auto; }
       }
       .erpShell { max-width: none; padding: 35px 0 60px; }
       .dashboardHeading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 0 0 22px; }

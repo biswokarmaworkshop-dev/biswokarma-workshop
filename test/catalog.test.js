@@ -12,6 +12,7 @@ const {
   filterProducts,
   findProductBySlug,
   inventoryListing,
+  listingSourceLabel,
   productSlug,
   verifiedImages,
 } = require("../vendor/catalog");
@@ -123,7 +124,12 @@ test("mapped illustrations are bundled, labeled, and never presented as verified
 });
 
 test("search supports demo names and workshop references without fabricated machine matches", () => {
-  const listings = products.map(catalogListing);
+  const inventory = inventoryListing({
+    id: "saved-part",
+    name: "Recorded pump",
+    machine: "JCB 3DX",
+  });
+  const listings = [...products.map(catalogListing), inventory];
   assert.deepEqual(
     filterProducts(listings, { query: "BW-JCB3DX-003" }).map((product) => product.name),
     ["JCB 3DX Hydraulic Pump"],
@@ -136,7 +142,10 @@ test("search supports demo names and workshop references without fabricated mach
     filterProducts(listings, { category: "Electrical" }).length,
     2,
   );
-  assert.deepEqual(filterProducts(listings, { model: "JCB 3DX" }), []);
+  assert.deepEqual(
+    filterProducts(listings, { model: "JCB 3DX" }).map((product) => product.id),
+    ["saved-part"],
+  );
   assert.deepEqual(
     filterProducts(listings, { productIds: ["jcb3dx-001", "jcb3dx-002"] }).map(
       (product) => product.id,
@@ -145,11 +154,38 @@ test("search supports demo names and workshop references without fabricated mach
   );
   assert.equal(
     filterProducts(
-      [inventoryListing({ id: "saved", name: "Recorded pump", machine: "JCB 3DX" })],
+      [inventory],
       { model: "JCB 3DX" },
     ).length,
     1,
   );
+  assert.equal(
+    filterProducts(listings, { source: "workshop_inventory" }).length,
+    1,
+  );
+  assert.equal(
+    filterProducts(listings, { source: "demo_catalog" }).length,
+    products.length,
+  );
+  assert.equal(
+    listingSourceLabel(inventory),
+    "Saved workshop record · confirm details",
+  );
+  assert.equal(
+    listingSourceLabel(listings[0]),
+    "Unverified demo reference",
+  );
+});
+
+test("new installations do not invent workshop inventory and existing records remain loadable", () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
+    "utf8",
+  );
+  assert.match(html, /function seedParts\(\)\s*\{\s*return \[\];\s*\}/);
+  assert.ok(html.includes("if (!p) {"));
+  assert.ok(html.includes("setParts(state.parts);"));
+  assert.ok(html.includes("Saved workshop inventory record · not independently verified"));
 });
 
 test("parts story has eight complete chapters linked to matching catalog records", () => {
@@ -239,6 +275,9 @@ test("existing inventory remains browsable with its stored stock and price, with
   assert.equal(listing.availability, "in_stock");
   assert.equal(listing.catalogSource, "workshop_inventory");
   assert.deepEqual(listing.images, []);
+
+  const noMachine = inventoryListing({ id: "unassigned", name: "Unassigned part" });
+  assert.deepEqual(noMachine.compatibleModels, []);
 });
 
 test("quote inquiry includes selected products and cart quantities in existing inquiry fields", () => {
