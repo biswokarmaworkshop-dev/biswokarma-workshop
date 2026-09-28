@@ -96,19 +96,5 @@
     },
   ];
 
-  function nearestChapterIndex(chapterRects, viewportCenter) {
-    if (!chapterRects.length) return 0;
-    let nearest = 0;
-    let distance = Number.POSITIVE_INFINITY;
-    chapterRects.forEach((rect, index) => {
-      const nextDistance = Math.abs(rect.top + rect.height * 0.5 - viewportCenter);
-      if (nextDistance < distance) {
-        nearest = index;
-        distance = nextDistance;
-      }
-    });
-    return nearest;
-  }
-
-  return { chapters, nearestChapterIndex };
+  return { chapters };
 });

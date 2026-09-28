@@ -12,6 +12,8 @@ const localDatabaseFile = path.join(__dirname, "workshop-state.json");
 const vendorDirectory = path.join(__dirname, "vendor");
 const imagesDirectory = path.join(__dirname, "images");
 const jcbProductCatalog = require("./data/jcb-parts.json");
+const illustrativePartImages = require("./data/illustrative-jcb-parts.json");
+const { catalogListing } = require("./vendor/catalog");
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -138,7 +140,15 @@ function verifyWebhook(body, request) {
 async function api(request, response, url) {
   if (url.pathname === "/api/catalog/products" && request.method === "GET") {
     response.setHeader("Cache-Control", "public, max-age=300");
-    return json(response, 200, { products: jcbProductCatalog });
+    return json(response, 200, {
+      products: jcbProductCatalog.map((product) =>
+        catalogListing(
+          product,
+          illustrativePartImages.images[product.id],
+          illustrativePartImages.source,
+        ),
+      ),
+    });
   }
   if (url.pathname === "/api/health" && request.method === "GET") {
     if (!pool)

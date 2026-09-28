@@ -56,10 +56,62 @@
     };
   }
 
+  function catalogListing(product, illustration, illustrationSource) {
+    const images =
+      illustration &&
+      illustrationSource === "User-supplied generated parts catalog sheet" &&
+      typeof illustration.filename === "string" &&
+      /^[a-z0-9-]+\.jpg$/i.test(illustration.filename) &&
+      typeof illustration.alt === "string"
+        ? [
+            {
+              type: "illustrative_reference",
+              url: `/images/illustrative-jcb-parts/${illustration.filename}`,
+              alt: illustration.alt,
+              caption:
+                "Illustrative reference only - not the exact product or an OEM photo",
+              sourceName: illustrationSource,
+            },
+          ]
+        : [];
+    return {
+      ...product,
+      brand: "Supplier details unverified",
+      brandVerified: false,
+      priceNpr: null,
+      priceBasis: "Request a quote; no verified supplier price",
+      stock: null,
+      availability: "confirm_with_workshop",
+      compatibleModels: [],
+      description:
+        "Unverified demo catalog entry for quote requests. Confirm supplier, exact machine and serial-number fitment, specifications, price and availability with the workshop.",
+      specs: {},
+      images,
+      catalogSource: "demo_catalog",
+    };
+  }
+
+  function displayImages(images) {
+    if (!Array.isArray(images)) return [];
+    const verified = verifiedImages(images);
+    const illustrative = images.filter(
+      (image) =>
+        image &&
+        image.type === "illustrative_reference" &&
+        typeof image.url === "string" &&
+        /^\/images\/illustrative-jcb-parts\/[a-z0-9-]+\.jpg$/i.test(image.url) &&
+        typeof image.alt === "string" &&
+        /illustrative/i.test(image.alt) &&
+        /not the exact product or an OEM photo/i.test(image.alt) &&
+        image.caption ===
+          "Illustrative reference only - not the exact product or an OEM photo" &&
+        image.sourceName === "User-supplied generated parts catalog sheet",
+    );
+    return [...verified, ...illustrative];
+  }
+
   function filterProducts(products, filters) {
     const query = String(filters.query || "").trim().toLowerCase();
-    const minimum = filters.minimumPrice === "" ? null : Number(filters.minimumPrice);
-    const maximum = filters.maximumPrice === "" ? null : Number(filters.maximumPrice);
     return products.filter((product) => {
       const searchable = [
         product.name,
@@ -79,10 +131,6 @@
       if (filters.model && !(product.compatibleModels || []).includes(filters.model))
         return false;
       if (filters.category && product.category !== filters.category) return false;
-      if (filters.brand && product.brand !== filters.brand) return false;
-      if (minimum !== null && product.priceNpr < minimum) return false;
-      if (maximum !== null && product.priceNpr > maximum) return false;
-      if (filters.inStock && !(Number(product.stock) > 0)) return false;
       return true;
     });
   }
@@ -152,6 +200,8 @@
   return {
     addToCart,
     buildInquiry,
+    catalogListing,
+    displayImages,
     filterProducts,
     findProductBySlug,
     inventoryListing,
