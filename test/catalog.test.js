@@ -10,6 +10,7 @@ const {
   catalogListing,
   displayImages,
   filterProducts,
+  findInventoryIllustration,
   findProductBySlug,
   inventoryListing,
   listingSourceLabel,
@@ -120,6 +121,114 @@ test("mapped illustrations are bundled, labeled, and never presented as verified
   assert.ok(
     Object.keys(illustrationManifest.images).length < products.length,
     "unmatched demo records should remain without illustrations",
+  );
+});
+
+test("saved inventory illustrations match only the exact pictured part type", () => {
+  const matchedNames = [
+    "Air Filter",
+    "Alternator 12V 90A",
+    "Boom Cylinder Seal Kit",
+    "Bucket Teeth (Set of 5)",
+    "Clutch Plate",
+    "Fuel Filter",
+    "Hydraulic Hose 1/2\"",
+    "Hydraulic Pump Assembly",
+    "Main Control Valve",
+    "Oil Filter",
+    "Piston Ring Kit",
+    "Radiator Assembly",
+    "Sprocket",
+    "Starter Motor",
+    "Track Chain",
+    "Track Roller",
+    "Water Pump",
+  ];
+  const unmatchedNames = [
+    "Battery 12V 88Ah",
+    "Brake Shoe Set",
+    "Bucket Cylinder",
+    "Cabin Door Glass",
+    "Cylinder Head Gasket",
+    "Drive Shaft",
+    "Fan Belt",
+    "Fuel Injector",
+    "Gear Box Oil Seal",
+    "Grease Gun Nozzle",
+    "Headlight Assembly",
+    "Idler Wheel",
+    "Operator Seat",
+    "Pilot Valve",
+    "Pressure Gauge",
+    "Side Cutting Edge",
+    "Solenoid Valve",
+    "Steering Cylinder",
+    "Swing Motor",
+    "Travel Motor",
+    "Universal Joint",
+    "Wiper Motor",
+    "Wiring Harness",
+  ];
+  const inventoryRecords = [...matchedNames, ...unmatchedNames].flatMap(
+    (name, index) =>
+      [name, ...Array.from({ length: 7 }, (_, batch) => `${name} (Batch ${batch + 2})`)].map(
+        (recordName, batch) => ({
+          id: `inventory-${index}-${batch}`,
+          name: recordName,
+          category: "Workshop stock",
+          price: 12500,
+          stock: 4,
+          machine: "JCB 3DX",
+        }),
+      ),
+  );
+  const originalRecords = JSON.parse(JSON.stringify(inventoryRecords));
+  const listings = inventoryRecords.map((part) =>
+    inventoryListing(
+      part,
+      findInventoryIllustration(part, {
+        source: illustrationManifest.source,
+        images: illustrationManifest.inventoryImages,
+      }),
+      illustrationManifest.source,
+    ),
+  );
+  const illustratedListings = listings.filter((listing) => listing.images.length);
+
+  assert.equal(inventoryRecords.length, 320);
+  assert.equal(illustratedListings.length, 136);
+  assert.deepEqual(inventoryRecords, originalRecords);
+  assert.deepEqual(
+    Object.keys(illustrationManifest.inventoryImages).sort(),
+    matchedNames.slice().sort(),
+  );
+  for (const listing of illustratedListings) {
+    assert.equal(listing.priceNpr, 12500);
+    assert.equal(listing.stock, 4);
+    assert.equal(listing.category, "Workshop stock");
+    assert.equal(displayImages(listing.images).length, 1);
+    assert.match(listing.images[0].alt, /illustrative.*not the exact product or an OEM photo/i);
+    assert.match(listing.images[0].caption, /not the exact product or an OEM photo/i);
+  }
+  for (const name of unmatchedNames) {
+    for (const productName of [
+      name,
+      ...Array.from({ length: 7 }, (_, batch) => `${name} (Batch ${batch + 2})`),
+    ]) {
+      const part = { id: "unmatched", name: productName };
+      assert.equal(findInventoryIllustration(part, {
+        source: illustrationManifest.source,
+        images: illustrationManifest.inventoryImages,
+      }), null);
+      assert.deepEqual(inventoryListing(part).images, []);
+    }
+  }
+  assert.equal(
+    findInventoryIllustration(
+      { name: "Hydraulic Pump Assembly (Batch 2) extra" },
+      { source: illustrationManifest.source, images: illustrationManifest.inventoryImages },
+    ),
+    null,
   );
 });
 

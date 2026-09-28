@@ -30,6 +30,14 @@ test("serves the catalog API, product routes and catalog browser asset", async (
   assert.equal(catalog.products[0].catalogSource, "demo_catalog");
   assert.equal(catalog.products[0].images[0].type, "illustrative_reference");
   assert.match(catalog.products[0].images[0].caption, /not the exact product or an OEM photo/i);
+  assert.equal(
+    catalog.inventoryIllustrations.source,
+    "User-supplied generated parts catalog sheet",
+  );
+  assert.equal(
+    catalog.inventoryIllustrations.images["Hydraulic Pump Assembly"].filename,
+    "19-hydraulic-pump-assembly.jpg",
+  );
 
   const product = catalog.products.find(
     (item) => item.name === "JCB 3DX Hydraulic Pump",

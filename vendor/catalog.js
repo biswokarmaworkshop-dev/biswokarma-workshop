@@ -30,7 +30,47 @@
     return products.find((product) => productSlug(product) === slug) || null;
   }
 
-  function inventoryListing(part) {
+  function illustrativeImages(illustration, illustrationSource) {
+    if (
+      !illustration ||
+      illustrationSource !== "User-supplied generated parts catalog sheet" ||
+      typeof illustration.filename !== "string" ||
+      !/^[a-z0-9-]+\.jpg$/i.test(illustration.filename) ||
+      typeof illustration.alt !== "string" ||
+      !/illustrative/i.test(illustration.alt) ||
+      !/not the exact product or an OEM photo/i.test(illustration.alt)
+    )
+      return [];
+    return [
+      {
+        type: "illustrative_reference",
+        url: `/images/illustrative-jcb-parts/${illustration.filename}`,
+        alt: illustration.alt,
+        caption:
+          "Illustrative reference only - not the exact product or an OEM photo",
+        sourceName: illustrationSource,
+      },
+    ];
+  }
+
+  function findInventoryIllustration(part, manifest) {
+    if (
+      !part ||
+      typeof part.name !== "string" ||
+      !manifest ||
+      manifest.source !== "User-supplied generated parts catalog sheet" ||
+      !manifest.images ||
+      typeof manifest.images !== "object" ||
+      Array.isArray(manifest.images)
+    )
+      return null;
+    const baseName = part.name.replace(/ \(Batch [1-9]\d*\)$/, "");
+    return Object.prototype.hasOwnProperty.call(manifest.images, baseName)
+      ? manifest.images[baseName]
+      : null;
+  }
+
+  function inventoryListing(part, illustration, illustrationSource) {
     const hasStock =
       part.stock !== null && part.stock !== undefined && part.stock !== "";
     const stock =
@@ -57,29 +97,13 @@
       compatibleModels: part.machine ? [String(part.machine)] : [],
       description: `Existing workshop inventory listing for ${String(part.name || "this part")}. Confirm supplier brand, exact fitment and current price with the workshop.`,
       specs: { inventoryStatus: "Existing workshop inventory record" },
-      images: [],
+      images: illustrativeImages(illustration, illustrationSource),
       catalogSource: "workshop_inventory",
     };
   }
 
   function catalogListing(product, illustration, illustrationSource) {
-    const images =
-      illustration &&
-      illustrationSource === "User-supplied generated parts catalog sheet" &&
-      typeof illustration.filename === "string" &&
-      /^[a-z0-9-]+\.jpg$/i.test(illustration.filename) &&
-      typeof illustration.alt === "string"
-        ? [
-            {
-              type: "illustrative_reference",
-              url: `/images/illustrative-jcb-parts/${illustration.filename}`,
-              alt: illustration.alt,
-              caption:
-                "Illustrative reference only - not the exact product or an OEM photo",
-              sourceName: illustrationSource,
-            },
-          ]
-        : [];
+    const images = illustrativeImages(illustration, illustrationSource);
     return {
       ...product,
       brand: "Supplier details unverified",
@@ -210,6 +234,7 @@
     catalogListing,
     displayImages,
     filterProducts,
+    findInventoryIllustration,
     findProductBySlug,
     inventoryListing,
     listingSourceLabel,

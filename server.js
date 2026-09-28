@@ -148,6 +148,10 @@ async function api(request, response, url) {
           illustrativePartImages.source,
         ),
       ),
+      inventoryIllustrations: {
+        source: illustrativePartImages.source,
+        images: illustrativePartImages.inventoryImages,
+      },
     });
   }
   if (url.pathname === "/api/health" && request.method === "GET") {

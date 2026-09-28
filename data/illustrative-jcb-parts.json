@@ -70,5 +70,75 @@
       "filename": "09-clutch-plate.jpg",
       "alt": "Illustrative generated clutch-plate reference image; not the exact product or an OEM photo."
     }
+  },
+  "inventoryImages": {
+    "Air Filter": {
+      "filename": "01-air-filter.jpg",
+      "alt": "Illustrative generated air-filter reference image; not the exact product or an OEM photo."
+    },
+    "Alternator 12V 90A": {
+      "filename": "02-alternator-12v-90a.jpg",
+      "alt": "Illustrative generated alternator reference image; not the exact product or an OEM photo."
+    },
+    "Boom Cylinder Seal Kit": {
+      "filename": "04-boom-cylinder-seal-kit.jpg",
+      "alt": "Illustrative generated boom-cylinder-seal-kit reference image; not the exact product or an OEM photo."
+    },
+    "Bucket Teeth (Set of 5)": {
+      "filename": "07-bucket-teeth-set-of-5.jpg",
+      "alt": "Illustrative generated bucket-teeth reference image; not the exact product or an OEM photo."
+    },
+    "Clutch Plate": {
+      "filename": "09-clutch-plate.jpg",
+      "alt": "Illustrative generated clutch-plate reference image; not the exact product or an OEM photo."
+    },
+    "Fuel Filter": {
+      "filename": "13-fuel-filter.jpg",
+      "alt": "Illustrative generated fuel-filter reference image; not the exact product or an OEM photo."
+    },
+    "Hydraulic Hose 1/2\"": {
+      "filename": "18-hydraulic-hose-1-2in.jpg",
+      "alt": "Illustrative generated hydraulic-hose reference image; not the exact product or an OEM photo."
+    },
+    "Hydraulic Pump Assembly": {
+      "filename": "19-hydraulic-pump-assembly.jpg",
+      "alt": "Illustrative generated hydraulic-pump reference image; not the exact product or an OEM photo."
+    },
+    "Main Control Valve": {
+      "filename": "21-main-control-valve.jpg",
+      "alt": "Illustrative generated control-valve reference image; not the exact product or an OEM photo."
+    },
+    "Oil Filter": {
+      "filename": "22-oil-filter.jpg",
+      "alt": "Illustrative generated oil-filter reference image; not the exact product or an OEM photo."
+    },
+    "Piston Ring Kit": {
+      "filename": "25-piston-ring-kit.jpg",
+      "alt": "Illustrative generated piston-ring reference image; not the exact product or an OEM photo."
+    },
+    "Radiator Assembly": {
+      "filename": "27-radiator-assembly.jpg",
+      "alt": "Illustrative generated radiator reference image; not the exact product or an OEM photo."
+    },
+    "Sprocket": {
+      "filename": "30-sprocket.jpg",
+      "alt": "Illustrative generated sprocket reference image; not the exact product or an OEM photo."
+    },
+    "Starter Motor": {
+      "filename": "31-starter-motor.jpg",
+      "alt": "Illustrative generated starter-motor reference image; not the exact product or an OEM photo."
+    },
+    "Track Chain": {
+      "filename": "34-track-chain.jpg",
+      "alt": "Illustrative generated track-chain reference image; not the exact product or an OEM photo."
+    },
+    "Track Roller": {
+      "filename": "35-track-roller.jpg",
+      "alt": "Illustrative generated track-roller reference image; not the exact product or an OEM photo."
+    },
+    "Water Pump": {
+      "filename": "38-water-pump.jpg",
+      "alt": "Illustrative generated water-pump reference image; not the exact product or an OEM photo."
+    }
   }
 }

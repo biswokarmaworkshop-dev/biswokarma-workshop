@@ -608,6 +608,7 @@
         );
         const [parts, setParts] = useState([]);
         const [catalogProducts, setCatalogProducts] = useState([]);
+        const [inventoryIllustrations, setInventoryIllustrations] = useState(null);
         const [catalogLoading, setCatalogLoading] = useState(true);
         const [catalogError, setCatalogError] = useState("");
         const [cart, setCart] = useState(() => {
@@ -735,9 +736,14 @@
               return response.json();
             })
             .then((result) => {
-              if (!result || !Array.isArray(result.products))
+              if (
+                !result ||
+                !Array.isArray(result.products) ||
+                !result.inventoryIllustrations
+              )
                 throw new TypeError("Catalog response is invalid");
               setCatalogProducts(result.products);
+              setInventoryIllustrations(result.inventoryIllustrations);
               setCatalogError("");
             })
             .catch((error) => {
@@ -925,7 +931,13 @@
         const removeFromCart = (productId) =>
           persistCart(cart.filter((item) => item.productId !== productId));
         const marketplaceProducts = catalogProducts.concat(
-          parts.map(Catalog.inventoryListing),
+          parts.map((part) =>
+            Catalog.inventoryListing(
+              part,
+              Catalog.findInventoryIllustration(part, inventoryIllustrations),
+              inventoryIllustrations && inventoryIllustrations.source,
+            ),
+          ),
         );
         const persistedActiveInvoice =
           activeInvoice ||
