@@ -69,6 +69,7 @@
     </div>
 
     <script src="/vendor/vat.js"></script>
+    <script src="/vendor/catalog.js"></script>
     <script src="/vendor/react.production.min.js"></script>
     <script>
       /* function OwnerDashboard({ parts, inquiries, customers, suppliers, purchases,
@@ -228,6 +229,7 @@
       var useState = React.useState,
         useEffect = React.useEffect,
         useCallback = React.useCallback;
+      const Catalog = BiswokarmaCatalog;
 
       /* ================= storage helpers (browser localStorage) ================= */
       function loadShared(key, fallback) {
@@ -614,6 +616,27 @@
         const [tab, setTab] = useState("overview"); // overview | stock | inquiries | customers | suppliers | purchases | payments | billing | invoices | reports | users | notifications | audit | settings
         const [auth, setAuth] = useState(null);
         const [parts, setParts] = useState([]);
+        const [catalogProducts, setCatalogProducts] = useState([]);
+        const [catalogLoading, setCatalogLoading] = useState(true);
+        const [catalogError, setCatalogError] = useState("");
+        const [cart, setCart] = useState(() => {
+          const saved = loadShared("bw_marketplace_cart", []);
+          return Array.isArray(saved)
+            ? saved.filter(
+                (item) =>
+                  item &&
+                  typeof item.productId === "string" &&
+                  Number.isInteger(item.quantity) &&
+                  item.quantity > 0,
+              )
+            : [];
+        });
+        const [cartOpen, setCartOpen] = useState(false);
+        const [inquiryContext, setInquiryContext] = useState({
+          products: [],
+          cart: [],
+        });
+        const closeCart = useCallback(() => setCartOpen(false), []);
         const [inquiries, setInquiries] = useState([]);
         const [customers, setCustomers] = useState([]);
         const [suppliers, setSuppliers] = useState([]);
@@ -716,6 +739,24 @@
               });
             })
             .catch(() => {});
+          fetch("/api/catalog/products")
+            .then((response) => {
+              if (!response.ok) throw new Error("Catalog request failed");
+              return response.json();
+            })
+            .then((result) => {
+              if (!result || !Array.isArray(result.products))
+                throw new TypeError("Catalog response is invalid");
+              setCatalogProducts(result.products);
+              setCatalogError("");
+            })
+            .catch((error) => {
+              console.error("Unable to load the spare-parts catalog:", error);
+              setCatalogError(
+                "The spare-parts catalog could not be loaded. Please try again shortly.",
+              );
+            })
+            .finally(() => setCatalogLoading(false));
         }, []);
         const persistAuth = (next) => {
           setAuth(next);
@@ -784,7 +825,12 @@
           window.addEventListener("popstate", syncRoute);
           return () => window.removeEventListener("popstate", syncRoute);
         }, []);
-        const nav = (v, t) => {
+        const nav = (v, t, request) => {
+          setInquiryContext(
+            v === "contact" && request
+              ? request
+              : { products: [], cart: [] },
+          );
           if (
             v !== "product" &&
             window.location.pathname.startsWith("/products/")
@@ -800,7 +846,7 @@
           });
         };
         const openProduct = (part) => {
-          const slug = slugifyPart(part);
+          const slug = Catalog.productSlug(part);
           window.history.pushState(null, "", `/products/${slug}`);
           setProductSlug(slug);
           setView("product");
@@ -810,6 +856,27 @@
           setCurrentUser(null); localStorage.removeItem("bw_currentUser");
           nav("home");
         };
+        const persistCart = (next) => {
+          setCart(next);
+          saveShared("bw_marketplace_cart", next);
+        };
+        const addToCart = (product, quantity) => {
+          persistCart(Catalog.addToCart(cart, product.id, quantity || 1));
+          flash(`${product.name} added to your quote cart.`);
+        };
+        const updateCartQuantity = (productId, quantity) => {
+          if (!Number.isInteger(quantity) || quantity < 1) return;
+          persistCart(
+            cart.map((item) =>
+              item.productId === productId ? { ...item, quantity } : item,
+            ),
+          );
+        };
+        const removeFromCart = (productId) =>
+          persistCart(cart.filter((item) => item.productId !== productId));
+        const marketplaceProducts = catalogProducts.concat(
+          parts.map(Catalog.inventoryListing),
+        );
         if (!loaded)
           return React.createElement(
             "div",
@@ -870,6 +937,18 @@
                   onClick: () => nav("parts"),
                 },
                 "Spare Parts",
+              ),
+              React.createElement(
+                "button",
+                {
+                  type: "button",
+                  className: "marketCartTrigger",
+                  "aria-label": `Open quote cart, ${cart.reduce((sum, item) => sum + item.quantity, 0)} items`,
+                  onClick: () => setCartOpen(true),
+                },
+                "Quote cart (",
+                cart.reduce((sum, item) => sum + item.quantity, 0),
+                ")",
               ),
               React.createElement(
                 "button",
@@ -947,26 +1026,49 @@
                   nav,
                 }),
               view === "parts" &&
-                React.createElement(Parts, {
-                  parts,
+                React.createElement(MarketplaceParts, {
+                  products: marketplaceProducts,
+                  loading: catalogLoading,
+                  error: catalogError && !parts.length ? catalogError : "",
                   nav,
                   onSelect: openProduct,
+                  onAddToCart: addToCart,
                 }),
               view === "product" &&
                 React.createElement(ProductDetail, {
-                  part: parts.find((part) => slugifyPart(part) === productSlug),
+                  part:
+                    Catalog.findProductBySlug(marketplaceProducts, productSlug) ||
+                    parts.find((part) => slugifyPart(part) === productSlug),
+                  loading: catalogLoading,
+                  error: catalogError,
                   nav,
+                  onAddToCart: addToCart,
                 }),
               view === "contact" &&
                 React.createElement(Contact, {
+                  products: inquiryContext.products,
+                  cartItems: inquiryContext.cart,
                   onSubmit: (data) => {
+                    const inquiry = Catalog.buildInquiry(
+                      inquiryContext.products,
+                      data,
+                      inquiryContext.cart,
+                    );
                     const entry = {
                       id: uid(),
-                      ...data,
+                      ...inquiry,
                       status: "New",
                       date: todayStr(),
                     };
                     persistInquiries([entry, ...inquiries]);
+                    if (inquiryContext.cart.length) {
+                      const submittedIds = new Set(
+                        inquiryContext.cart.map((item) => item.productId),
+                      );
+                      persistCart(
+                        cart.filter((item) => !submittedIds.has(item.productId)),
+                      );
+                    }
                     flash(
                       "Inquiry sent \u2014 the workshop will get back to you.",
                     );
@@ -1014,6 +1116,28 @@
                 }),
             ),
           ),
+          cartOpen &&
+            React.createElement(CartDrawer, {
+            products: marketplaceProducts,
+              cart,
+              onClose: closeCart,
+              onQuantityChange: updateCartQuantity,
+              onRemove: removeFromCart,
+              onInquiry: (items) => {
+                const requestedProducts = items
+                  .map((item) =>
+                    marketplaceProducts.find(
+                      (product) => product.id === item.productId,
+                    ),
+                  )
+                  .filter(Boolean);
+                setCartOpen(false);
+                nav("contact", null, {
+                  products: requestedProducts,
+                  cart: items,
+                });
+              },
+            }),
           React.createElement(
             "footer",
             {
@@ -1510,7 +1634,43 @@
         );
       }
 
-      function ProductDetail({ part, nav }) {
+      function ProductPhotography({ product, large }) {
+        const images = Catalog.verifiedImages(product.images);
+        return React.createElement(
+          "div",
+          {
+            className: "productPhotography" + (large ? " productPhotographyLarge" : ""),
+          },
+          images.length
+            ? images.map((image) =>
+                React.createElement(
+                  "figure",
+                  { className: "productPhoto", key: image.url },
+                  React.createElement("img", {
+                    src: image.url,
+                    alt: image.alt || product.name,
+                    loading: large ? "eager" : "lazy",
+                    decoding: "async",
+                    onError: (event) => event.currentTarget.remove(),
+                  }),
+                  React.createElement(
+                    "figcaption",
+                    null,
+                    image.attribution,
+                    " · ",
+                    image.license,
+                  ),
+                ),
+              )
+            : React.createElement(
+                "p",
+                { className: "photoUnavailable" },
+                "No verified supplier product photos have been provided.",
+              ),
+        );
+      }
+
+      function ProductDetail({ part, nav, loading, error, onAddToCart }) {
         useEffect(() => {
           if (!part) return undefined;
           const previousTitle = document.title;
@@ -1527,15 +1687,29 @@
             }
           };
         }, [part]);
+        if (part && Array.isArray(part.compatibleModels)) {
+          return React.createElement(MarketplaceProductDetail, {
+            product: part,
+            nav,
+            onAddToCart,
+          });
+        }
+        if (!part && loading) {
+          return React.createElement(
+            "section",
+            { className: "pageSection productNotFound", "aria-live": "polite" },
+            "Loading product details\u2026",
+          );
+        }
         if (!part) {
           return React.createElement(
             "section",
             { className: "pageSection productNotFound" },
-            React.createElement("h1", null, "Part not found"),
+            React.createElement("h1", null, error ? "Catalog unavailable" : "Part not found"),
             React.createElement(
               "p",
               { className: "subtext" },
-              "This part may have been removed from the live inventory.",
+              error || "This part may have been removed from the live inventory.",
             ),
             React.createElement(
               "button",
@@ -1558,7 +1732,7 @@
           React.createElement(
             "div",
             { className: "productDetailGrid" },
-            React.createElement(PartArtwork, { part, large: true }),
+            React.createElement(ProductPhotography, { product: part, large: true }),
             React.createElement(
               "div",
               { className: "productDetailCopy" },
@@ -1783,6 +1957,572 @@
           ),
         );
       }
+      function formatNpr(amount) {
+        return `NPR ${Number(amount).toLocaleString("en-NP")}`;
+      }
+
+      function MarketplaceParts({
+        products,
+        loading,
+        error,
+        nav,
+        onSelect,
+        onAddToCart,
+      }) {
+        const [filters, setFilters] = useState({
+          query: "",
+          model: "",
+          category: "",
+          brand: "",
+          minimumPrice: "",
+          maximumPrice: "",
+          inStock: false,
+        });
+        const models = Array.from(
+          new Set(products.flatMap((product) => product.compatibleModels || [])),
+        );
+        const categories = Array.from(
+          new Set(products.map((product) => product.category)),
+        );
+        const brands = Array.from(new Set(products.map((product) => product.brand)));
+        const filtered = Catalog.filterProducts(products, filters);
+        const update = (key) => (event) =>
+          setFilters({
+            ...filters,
+            [key]:
+              key === "inStock" ? event.target.checked : event.target.value,
+          });
+        if (loading) {
+          return React.createElement(
+            "section",
+            { className: "pageSection marketplace", "aria-live": "polite" },
+            "Loading the spare-parts catalog\u2026",
+          );
+        }
+        if (error) {
+          return React.createElement(
+            "section",
+            { className: "pageSection marketplace", role: "alert" },
+            React.createElement("h1", null, "Catalog unavailable"),
+            React.createElement("p", null, error),
+          );
+        }
+        return React.createElement(
+          "section",
+          { className: "pageSection marketplace" },
+          React.createElement(
+            "div",
+            { className: "marketplaceHeading" },
+            React.createElement(
+              "div",
+              null,
+              React.createElement("span", { className: "marketplaceEyebrow" }, "JCB parts · Gorkha, Nepal"),
+              React.createElement("h1", null, "Find the right part"),
+              React.createElement(
+                "p",
+                null,
+                "Search the JCB 3DX and 444 parts catalog. Check exact fitment, price and availability with our workshop before ordering.",
+              ),
+            ),
+            React.createElement(
+              "div",
+              { className: "catalogCount", "aria-live": "polite" },
+              React.createElement("strong", null, products.length),
+              React.createElement("span", null, "catalog references"),
+            ),
+          ),
+          React.createElement(
+            "div",
+            { className: "catalogNotice", role: "note" },
+            "POC catalog: new reference prices are indicative NPR estimates; existing workshop inventory prices and stock are shown from saved records. Supplier brands and OEM part numbers are unverified. Confirm fitment, live availability and final VAT-inclusive price with the workshop. No product photos are shown until licensed supplier images are supplied.",
+          ),
+          React.createElement(
+            "div",
+            { className: "catalogLayout" },
+            React.createElement(
+              "aside",
+              { className: "catalogFilters", "aria-label": "Filter products" },
+              React.createElement("h2", null, "Filter parts"),
+              React.createElement(
+                "label",
+                null,
+                "Search name or part number",
+                React.createElement("input", {
+                  type: "search",
+                  placeholder: "e.g. BW-JCB3DX-003",
+                  value: filters.query,
+                  onChange: update("query"),
+                }),
+              ),
+              React.createElement(
+                "label",
+                null,
+                "JCB model",
+                React.createElement(
+                  "select",
+                  { value: filters.model, onChange: update("model") },
+                  React.createElement("option", { value: "" }, "All models"),
+                  models.map((model) =>
+                    React.createElement("option", { key: model, value: model }, model),
+                  ),
+                ),
+              ),
+              React.createElement(
+                "label",
+                null,
+                "Category",
+                React.createElement(
+                  "select",
+                  { value: filters.category, onChange: update("category") },
+                  React.createElement("option", { value: "" }, "All categories"),
+                  categories.map((category) =>
+                    React.createElement("option", { key: category, value: category }, category),
+                  ),
+                ),
+              ),
+              React.createElement(
+                "label",
+                null,
+                "Supplier brand",
+                React.createElement(
+                  "select",
+                  { value: filters.brand, onChange: update("brand") },
+                  React.createElement("option", { value: "" }, "All brands"),
+                  brands.map((brand) =>
+                    React.createElement("option", { key: brand, value: brand }, brand),
+                  ),
+                ),
+              ),
+              React.createElement(
+                "fieldset",
+                { className: "priceRange" },
+                React.createElement("legend", null, "Indicative NPR price"),
+                React.createElement("label", null, "From", React.createElement("input", {
+                  type: "number",
+                  min: "0",
+                  inputMode: "numeric",
+                  value: filters.minimumPrice,
+                  onChange: update("minimumPrice"),
+                })),
+                React.createElement("label", null, "To", React.createElement("input", {
+                  type: "number",
+                  min: "0",
+                  inputMode: "numeric",
+                  value: filters.maximumPrice,
+                  onChange: update("maximumPrice"),
+                })),
+              ),
+              React.createElement(
+                "label",
+                { className: "inStockFilter" },
+                React.createElement("input", {
+                  type: "checkbox",
+                  checked: filters.inStock,
+                  onChange: update("inStock"),
+                }),
+                "In stock now",
+              ),
+              React.createElement(
+                "button",
+                {
+                  className: "filterReset",
+                  type: "button",
+                  onClick: () =>
+                    setFilters({
+                      query: "",
+                      model: "",
+                      category: "",
+                      brand: "",
+                      minimumPrice: "",
+                      maximumPrice: "",
+                      inStock: false,
+                    }),
+                },
+                "Clear filters",
+              ),
+            ),
+            React.createElement(
+              "div",
+              { className: "catalogResults" },
+              React.createElement(
+                "p",
+                { className: "resultCount", "aria-live": "polite" },
+                `${filtered.length} of ${products.length} parts`,
+              ),
+              filtered.length
+                ? React.createElement(
+                    "div",
+                    { className: "marketProductGrid" },
+                    filtered.map((product) =>
+                      React.createElement(
+                        "article",
+                        { className: "marketProductCard", key: product.id },
+                        React.createElement(ProductPhotography, {
+                          product,
+                          large: false,
+                        }),
+                        React.createElement(
+                          "div",
+                          { className: "marketProductBody" },
+                          React.createElement("span", { className: "productCategory" }, product.category),
+                          React.createElement(
+                            "h2",
+                            null,
+                            React.createElement(
+                              "a",
+                              {
+                                href: `/products/${Catalog.productSlug(product)}`,
+                                onClick: (event) => {
+                                  event.preventDefault();
+                                  onSelect(product);
+                                },
+                              },
+                              product.name,
+                            ),
+                          ),
+                          React.createElement("p", { className: "productNumber" }, product.partNumber),
+                          React.createElement("p", { className: "cardCompatibility" }, product.compatibleModels.join(" · ")),
+                          React.createElement(
+                            "p",
+                            { className: "productCardAvailability" },
+                            product.stock === null
+                              ? "Availability: confirm with workshop"
+                              : product.stock > 0
+                                ? `${product.stock} in workshop stock · confirm before ordering`
+                                : "Currently out of stock",
+                          ),
+                          React.createElement("strong", { className: "marketPrice" }, formatNpr(product.priceNpr)),
+                          React.createElement(
+                            "span",
+                            { className: "priceDisclaimer" },
+                            product.catalogSource === "workshop_inventory"
+                              ? "Stored workshop price · VAT included"
+                              : "Indicative · confirm current price",
+                          ),
+                          React.createElement(
+                            "div",
+                            { className: "productCardActions" },
+                            React.createElement(
+                              "button",
+                              {
+                                className: "btnPrimary",
+                                type: "button",
+                                onClick: () => onAddToCart(product, 1),
+                              },
+                              "Add to quote cart",
+                            ),
+                            React.createElement(
+                              "button",
+                              {
+                                className: "productDetailsLink",
+                                type: "button",
+                                onClick: () => onSelect(product),
+                              },
+                              "View details",
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : React.createElement(
+                    "div",
+                    { className: "catalogEmpty", role: "status" },
+                    React.createElement("h2", null, "No matching parts"),
+                    React.createElement(
+                      "p",
+                      null,
+                      filters.inStock
+                        ? "Live inventory is not connected yet, so stock cannot be verified for this POC catalog. Contact the workshop to check availability."
+                        : "Try clearing a filter or send an inquiry and the workshop can check supplier availability.",
+                    ),
+                  ),
+            ),
+          ),
+          React.createElement(
+            "div",
+            { className: "marketplaceHelp" },
+            "Need a different part? ",
+            React.createElement("button", { type: "button", onClick: () => nav("contact") }, "Ask the workshop"),
+          ),
+        );
+      }
+
+      function MarketplaceProductDetail({ product, nav, onAddToCart }) {
+        const [quantity, setQuantity] = useState(1);
+        useEffect(() => {
+          if (!product) return undefined;
+          const previousTitle = document.title;
+          document.title = `${product.name} | Biswokarma Workshop`;
+          return () => {
+            document.title = previousTitle;
+          };
+        }, [product]);
+        const requestProduct = () =>
+          nav("contact", null, { products: [product], cart: [] });
+        return React.createElement(
+          "section",
+          { className: "pageSection marketplace productDetail marketplaceDetail" },
+          React.createElement(
+            "button",
+            { className: "backLink", type: "button", onClick: () => nav("parts") },
+            "\u2190 Back to spare parts",
+          ),
+          React.createElement(
+            "div",
+            { className: "productDetailGrid" },
+            React.createElement(ProductPhotography, { product, large: true }),
+            React.createElement(
+              "div",
+              { className: "productDetailCopy" },
+              React.createElement("span", { className: "marketplaceEyebrow" }, product.category),
+              React.createElement("h1", null, product.name),
+              React.createElement("p", { className: "productNumber" }, `Workshop part reference: ${product.partNumber} · not an OEM part number`),
+              React.createElement("p", { className: "productFit" }, `Compatibility listing: ${product.compatibleModels.join(", ")}. Confirm exact fit by serial number.`),
+              React.createElement("p", { className: "productBrand" }, `Supplier brand: ${product.brand}`),
+              React.createElement("p", { className: "productPrice" }, formatNpr(product.priceNpr)),
+              React.createElement(
+                "p",
+                { className: "priceDisclaimer" },
+                product.catalogSource === "workshop_inventory"
+                  ? "Stored workshop inventory price · VAT included."
+                  : "Indicative estimate · VAT-inclusive treatment follows workshop pricing; confirm final price before ordering.",
+              ),
+              React.createElement(
+                "p",
+                { className: product.stock > 0 ? "productAvailability" : "productAvailability unavailable" },
+                product.stock === null
+                  ? "Stock quantity not connected · confirm availability with the workshop"
+                  : product.stock > 0
+                    ? `${product.stock} recorded in workshop stock · confirm before ordering`
+                    : "Currently out of stock",
+              ),
+              React.createElement("p", { className: "productDescription" }, product.description),
+              React.createElement(
+                "div",
+                { className: "detailActions" },
+                React.createElement(
+                  "label",
+                  { className: "quantityField" },
+                  "Quantity",
+                  React.createElement("input", {
+                    type: "number",
+                    min: "1",
+                    step: "1",
+                    value: quantity,
+                    onChange: (event) => {
+                      const value = Number(event.target.value);
+                      if (Number.isInteger(value) && value > 0) setQuantity(value);
+                    },
+                  }),
+                ),
+                React.createElement(
+                  "button",
+                  { className: "btnPrimary", type: "button", onClick: () => onAddToCart(product, quantity) },
+                  "Add to quote cart",
+                ),
+                React.createElement(
+                  "button",
+                  { className: "btnGhost", type: "button", onClick: requestProduct },
+                  "Ask about this part",
+                ),
+              ),
+              React.createElement(
+                "div",
+                { className: "productFacts" },
+                React.createElement("div", null, React.createElement("span", null, "Workshop reference"), React.createElement("strong", null, product.partNumber)),
+                React.createElement("div", null, React.createElement("span", null, "Supplier brand"), React.createElement("strong", null, "Not verified")),
+                React.createElement("div", null, React.createElement("span", null, "Availability"), React.createElement("strong", null, "Confirm with workshop")),
+              ),
+            ),
+          ),
+          React.createElement(
+            "section",
+            { className: "productSpecifications", "aria-labelledby": "specifications-heading" },
+            React.createElement("h2", { id: "specifications-heading" }, "Specifications & fitment"),
+            React.createElement(
+              "dl",
+              { className: "specificationList" },
+              Object.entries(product.specs).map(([label, value]) =>
+                React.createElement(
+                  "div",
+                  { key: label },
+                  React.createElement("dt", null, label),
+                  React.createElement("dd", null, value),
+                ),
+              ),
+              React.createElement(
+                "div",
+                null,
+                React.createElement("dt", null, "Compatibility"),
+                React.createElement("dd", null, product.compatibleModels.join(", ")),
+              ),
+              React.createElement(
+                "div",
+                null,
+                React.createElement("dt", null, "Price basis"),
+                React.createElement("dd", null, product.priceBasis),
+              ),
+            ),
+          ),
+        );
+      }
+
+      function CartDrawer({
+        products,
+        cart,
+        onClose,
+        onQuantityChange,
+        onRemove,
+        onInquiry,
+      }) {
+        const dialogRef = React.useRef(null);
+        useEffect(() => {
+          const previouslyFocused = document.activeElement;
+          if (dialogRef.current) dialogRef.current.focus();
+          const closeOnEscape = (event) => {
+            if (event.key === "Escape") onClose();
+          };
+          window.addEventListener("keydown", closeOnEscape);
+          return () => {
+            window.removeEventListener("keydown", closeOnEscape);
+            if (
+              previouslyFocused &&
+              previouslyFocused.isConnected &&
+              typeof previouslyFocused.focus === "function"
+            )
+              previouslyFocused.focus();
+          };
+        }, [onClose]);
+        const rows = cart
+          .map((item) => ({
+            ...item,
+            product: products.find((product) => product.id === item.productId),
+          }))
+          .filter((item) => item.product);
+        const total = rows.reduce(
+          (sum, item) => sum + item.product.priceNpr * item.quantity,
+          0,
+        );
+        return React.createElement(
+          "div",
+          {
+            className: "cartOverlay",
+            onMouseDown: (event) => {
+              if (event.target === event.currentTarget) onClose();
+            },
+          },
+          React.createElement(
+            "section",
+            {
+              className: "cartDialog",
+              role: "dialog",
+              "aria-modal": "true",
+              "aria-labelledby": "cart-heading",
+              tabIndex: -1,
+              ref: dialogRef,
+              onKeyDown: (event) => {
+                if (event.key !== "Tab") return;
+                const focusable = dialogRef.current.querySelectorAll(
+                  'button:not(:disabled), input:not(:disabled)',
+                );
+                if (!focusable.length) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (
+                  event.shiftKey &&
+                  (document.activeElement === first ||
+                    document.activeElement === dialogRef.current)
+                ) {
+                  event.preventDefault();
+                  last.focus();
+                } else if (
+                  !event.shiftKey &&
+                  (document.activeElement === last ||
+                    document.activeElement === dialogRef.current)
+                ) {
+                  event.preventDefault();
+                  first.focus();
+                }
+              },
+            },
+            React.createElement(
+              "header",
+              { className: "cartHeader" },
+              React.createElement(
+                "div",
+                null,
+                React.createElement("span", { className: "marketplaceEyebrow" }, "Parts request"),
+                React.createElement("h2", { id: "cart-heading" }, "Your quote cart"),
+              ),
+              React.createElement("button", { type: "button", className: "cartClose", onClick: onClose, "aria-label": "Close quote cart" }, "\u00d7"),
+            ),
+            rows.length
+              ? React.createElement(
+                  React.Fragment,
+                  null,
+                  React.createElement(
+                    "ul",
+                    { className: "cartLines" },
+                    rows.map((item) =>
+                      React.createElement(
+                        "li",
+                        { key: item.productId },
+                        React.createElement("strong", null, item.product.name),
+                        React.createElement("span", { className: "productNumber" }, item.product.partNumber),
+                        React.createElement("span", null, `${formatNpr(item.product.priceNpr)} each · indicative`),
+                        React.createElement(
+                          "div",
+                          { className: "cartLineControls" },
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              "aria-label": `Remove one ${item.product.name}`,
+                              disabled: item.quantity <= 1,
+                              onClick: () => onQuantityChange(item.productId, item.quantity - 1),
+                            },
+                            "\u2212",
+                          ),
+                          React.createElement("label", null, "Quantity", React.createElement("input", {
+                            type: "number",
+                            min: "1",
+                            step: "1",
+                            value: item.quantity,
+                            onChange: (event) => {
+                              const value = Number(event.target.value);
+                              if (Number.isInteger(value) && value > 0)
+                                onQuantityChange(item.productId, value);
+                            },
+                          })),
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              "aria-label": `Add one ${item.product.name}`,
+                              onClick: () => onQuantityChange(item.productId, item.quantity + 1),
+                            },
+                            "+",
+                          ),
+                          React.createElement("button", { type: "button", className: "cartRemove", onClick: () => onRemove(item.productId) }, "Remove"),
+                        ),
+                      ),
+                    ),
+                  ),
+                  React.createElement("p", { className: "cartTotal" }, "Indicative subtotal ", React.createElement("strong", null, formatNpr(total))),
+                  React.createElement("p", { className: "cartDisclaimer" }, "Quote request only. Stock and final price are confirmed by the workshop; this cart does not reserve or deduct inventory."),
+                  React.createElement("button", { className: "btnPrimary cartSubmit", type: "button", onClick: () => onInquiry(rows) }, "Request a quote"),
+                )
+              : React.createElement(
+                  "div",
+                  { className: "cartEmpty" },
+                  React.createElement("p", null, "Your quote cart is empty."),
+                  React.createElement("button", { className: "btnGhost", type: "button", onClick: onClose }, "Continue browsing"),
+                ),
+          ),
+        );
+      }
+
       function ContactLogo() {
         return React.createElement(
           "aside",
@@ -1809,12 +2549,23 @@
           React.createElement("p", null, "JCB SPARE PARTS & MACHINE REPAIR"),
         );
       }
-      function Contact({ onSubmit }) {
+      function Contact({ onSubmit, products = [], cartItems = [] }) {
+        const requestedParts = products.map((product) => {
+          const item = cartItems.find(
+            (cartItem) => cartItem.productId === product.id,
+          );
+          return `${product.name} (${product.partNumber}) × ${item ? item.quantity : 1}`;
+        });
         const [form, setForm] = useState({
           name: "",
           phone: "",
-          machineType: "",
-          issue: "",
+          machineType:
+            products[0] && products[0].compatibleModels
+              ? products[0].compatibleModels[0]
+              : "",
+          issue: requestedParts.length
+            ? `Please confirm availability and final price for: ${requestedParts.join("; ")}.`
+            : "",
         });
         const set = (k) => (e) =>
           setForm({
@@ -1855,6 +2606,15 @@
                 },
                 "Tell us about the machine and the problem \u2014 no account needed.",
               ),
+              requestedParts.length > 0 &&
+                React.createElement(
+                  "div",
+                  { className: "requestedProductSummary", "aria-label": "Parts in this quote request" },
+                  React.createElement("strong", null, "Parts requested"),
+                  requestedParts.map((item) =>
+                    React.createElement("span", { key: item }, item),
+                  ),
+                ),
               React.createElement(
                 "form",
                 {
@@ -6529,6 +7289,143 @@
       .productFacts span, .productFacts strong { display: block; }
       .productFacts span { color: #8d9ca5; font-size: 11px; }
       .productFacts strong { margin-top: 5px; color: #e4eaed; font-size: 12px; }
+      .marketplace {
+        --market-ink: #15232b;
+        --market-muted: #697982;
+        --market-line: #dce3e6;
+        color: var(--market-ink);
+        text-transform: none;
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+      }
+      .marketplace h1, .marketplace h2, .marketplace h3 {
+        color: var(--market-ink);
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+        letter-spacing: -.025em;
+        text-transform: none;
+      }
+      .marketplaceHeading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 28px;
+        margin-bottom: 24px;
+      }
+      .marketplaceHeading h1 { margin: 8px 0; font-size: clamp(32px, 4vw, 46px); }
+      .marketplaceHeading p { max-width: 680px; margin: 0; color: var(--market-muted); line-height: 1.6; }
+      .marketplaceEyebrow { color: #94600d; font-size: 11px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+      .catalogCount { display: grid; gap: 4px; min-width: 120px; padding: 15px; border: 1px solid var(--market-line); border-radius: 12px; background: #fff; text-align: center; }
+      .catalogCount strong { font-size: 25px; }
+      .catalogCount span { color: var(--market-muted); font-size: 11px; text-transform: uppercase; }
+      .catalogNotice { margin: 20px 0 26px; padding: 14px 16px; border: 1px solid #ead9b8; border-left: 4px solid #c18523; border-radius: 8px; background: #fff8eb; color: #5c4c2e; font-size: 12px; line-height: 1.6; }
+      .catalogLayout { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; gap: 24px; }
+      .catalogFilters { position: sticky; top: 16px; display: grid; gap: 15px; padding: 18px; border: 1px solid var(--market-line); border-radius: 12px; background: #fff; }
+      .catalogFilters h2 { margin-bottom: 2px; font-size: 17px; }
+      .catalogFilters > label, .priceRange label { display: grid; gap: 6px; color: #475861; font-size: 12px; font-weight: 650; }
+      .catalogFilters input:not([type="checkbox"]), .catalogFilters select, .quantityField input, .cartLineControls input { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #cbd5da; border-radius: 7px; background: #fff; color: #1b2b32; font: inherit; font-size: 13px; text-transform: none; }
+      .catalogFilters input:focus-visible, .catalogFilters select:focus-visible, .quantityField input:focus-visible, .cartLineControls input:focus-visible { outline: 3px solid rgba(208,145,37,.35); outline-offset: 1px; border-color: #b87814; }
+      .priceRange { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--market-line); }
+      .priceRange legend { grid-column: 1 / -1; padding: 0 0 9px; color: #475861; font-size: 12px; font-weight: 700; }
+      .inStockFilter { display: flex !important; grid-template-columns: auto 1fr !important; align-items: center; gap: 9px !important; }
+      .inStockFilter input { width: 17px; height: 17px; accent-color: #a86a0c; }
+      .filterReset, .productDetailsLink, .marketplaceHelp button { padding: 8px 0; border: 0; background: none; color: #80540f; font: inherit; font-size: 12px; font-weight: 700; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
+      .catalogResults { min-width: 0; }
+      .resultCount { margin: 0 0 12px; color: var(--market-muted); font-size: 12px; }
+      .marketProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)); gap: 15px; }
+      .marketProductCard { overflow: hidden; border: 1px solid var(--market-line); border-radius: 12px; background: #fff; box-shadow: 0 5px 16px rgba(17,35,44,.045); transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+      .marketProductCard:hover, .marketProductCard:focus-within { transform: translateY(-2px); border-color: #c99640; box-shadow: 0 10px 24px rgba(17,35,44,.1); }
+      .productPhotography { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-content: stretch; }
+      .productPhoto { position: relative; margin: 0; overflow: hidden; border-radius: 10px; background: #f3f5f5; }
+      .productPhoto img { display: block; width: 100%; height: 100%; min-height: 170px; object-fit: contain; }
+      .productPhoto figcaption { padding: 7px 10px; color: #53636b; font-size: 10px; }
+      .photoUnavailable { display: grid; min-height: 110px; place-items: center; margin: 0; padding: 18px; border-bottom: 1px solid #edf0f1; background: #f6f8f8; color: #66767e; font-size: 11px; text-align: center; }
+      .productPhotographyLarge .photoUnavailable { min-height: 390px; border: 1px solid var(--market-line); border-radius: 14px; font-size: 13px; }
+      .productPhotographyLarge .productPhoto img { min-height: 390px; }
+      .marketProductBody { display: flex; min-height: 320px; flex-direction: column; align-items: flex-start; padding: 16px; }
+      .productCategory { color: #7d5b27; font-size: 10px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+      .marketProductBody h2 { margin: 7px 0 5px; font-size: 17px; line-height: 1.3; }
+      .marketProductBody h2 a { color: inherit; text-decoration: none; }
+      .marketProductBody h2 a:hover { color: #8e5d0e; text-decoration: underline; text-underline-offset: 3px; }
+      .productNumber { margin: 0 0 7px; color: #64747c; font-size: 11px; font-weight: 650; letter-spacing: .025em; }
+      .cardCompatibility { margin: 0 0 9px; color: #52646d; font-size: 11px; line-height: 1.45; }
+      .productCardAvailability { margin: 0 0 12px; color: #586c57; font-size: 11px; }
+      .marketPrice { margin-top: auto; color: #172a32; font-size: 18px; }
+      .priceDisclaimer { display: block; margin-top: 4px; color: #79878d; font-size: 10px; line-height: 1.4; }
+      .productCardActions { display: grid; width: 100%; gap: 5px; margin-top: 13px; }
+      .productCardActions .btnPrimary { width: 100%; padding: 10px 12px; border-radius: 7px; font-size: 12px; }
+      .productDetailsLink { align-self: center; padding: 8px; }
+      .catalogEmpty { padding: 35px 24px; border: 1px dashed #cbd5da; border-radius: 12px; background: #fff; text-align: center; }
+      .catalogEmpty h2 { margin-bottom: 8px; font-size: 20px; }
+      .catalogEmpty p { margin: 0 auto; max-width: 460px; color: var(--market-muted); font-size: 13px; line-height: 1.55; }
+      .marketplaceHelp { margin-top: 26px; color: var(--market-muted); font-size: 13px; }
+      .marketplaceDetail .productDetailGrid { align-items: start; }
+      .marketplaceDetail .productDetailCopy h1 { color: #15232b; font: 700 clamp(30px,4vw,44px)/1.12 Inter, "Segoe UI", Arial, sans-serif; text-transform: none; }
+      .marketplaceDetail .productPrice { margin: 20px 0 3px; color: #15232b; font-size: 30px; }
+      .marketplaceDetail .priceDisclaimer { margin-bottom: 8px; font-size: 12px; }
+      .marketplaceDetail .productFit, .marketplaceDetail .productDescription { color: #52646d; font-size: 14px; line-height: 1.65; }
+      .marketplaceDetail .productAvailability { color: #5d6846; font-size: 13px; }
+      .marketplaceDetail .productBrand { color: #52646d; font-size: 13px; }
+      .detailActions { display: flex; align-items: end; gap: 9px; flex-wrap: wrap; margin: 16px 0 22px; }
+      .detailActions .btnPrimary, .detailActions .btnGhost { margin: 0; border-radius: 7px; font-size: 12px; }
+      .quantityField { display: grid; gap: 5px; color: #4c5d65; font-size: 11px; font-weight: 700; }
+      .quantityField input { width: 80px; }
+      .marketplaceDetail .productFacts { grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); }
+      .marketplaceDetail .productFacts span { color: #74828a; }
+      .marketplaceDetail .productFacts strong { color: #20323a; }
+      .productSpecifications { margin-top: 42px; padding-top: 24px; border-top: 1px solid var(--market-line); }
+      .productSpecifications h2 { margin-bottom: 15px; font-size: 23px; }
+      .specificationList { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 0 24px; margin: 0; }
+      .specificationList > div { padding: 12px 0; border-bottom: 1px solid #e7ecee; }
+      .specificationList dt { color: #74828a; font-size: 11px; text-transform: capitalize; }
+      .specificationList dd { margin: 5px 0 0; color: #20323a; font-size: 13px; line-height: 1.5; }
+      .marketCartTrigger { border: 1px solid rgba(245,183,0,.5) !important; border-radius: 6px !important; color: #ffe3a0 !important; }
+      .cartOverlay { position: fixed; z-index: 1000; inset: 0; display: flex; justify-content: flex-end; background: rgba(5,13,17,.62); }
+      .cartDialog { display: flex; width: min(480px, 100%); height: 100%; flex-direction: column; overflow-y: auto; padding: 24px; outline: none; background: #fff; color: #1c2c33; box-shadow: -18px 0 45px rgba(0,0,0,.2); text-transform: none; }
+      .cartHeader { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid #e0e6e9; }
+      .cartHeader h2 { margin-top: 5px; color: #172a32; font: 700 23px Inter, "Segoe UI", Arial, sans-serif; text-transform: none; }
+      .cartClose { width: 38px; height: 38px; border: 1px solid #d8e0e3; border-radius: 50%; background: #fff; color: #263a43; font-size: 24px; }
+      .cartLines { display: grid; gap: 18px; margin: 0; padding: 18px 0; list-style: none; }
+      .cartLines li { display: grid; gap: 7px; padding-bottom: 16px; border-bottom: 1px solid #e7ecee; }
+      .cartLines li > strong { color: #172a32; font-size: 14px; }
+      .cartLines li > span { color: #5b6d75; font-size: 11px; }
+      .cartLineControls { display: flex; align-items: end; gap: 8px; margin-top: 5px; }
+      .cartLineControls > button { min-width: 34px; min-height: 36px; border: 1px solid #cbd5da; border-radius: 6px; background: #fff; color: #20323a; font-size: 18px; }
+      .cartLineControls > button:disabled { opacity: .45; }
+      .cartLineControls label { display: grid; gap: 4px; color: #66767e; font-size: 10px; }
+      .cartLineControls input { width: 65px; }
+      .cartLineControls .cartRemove { margin-left: auto; padding: 0 9px; color: #8b3b2b; font-size: 11px; }
+      .cartTotal { display: flex; justify-content: space-between; gap: 12px; padding-top: 10px; color: #4d5f67; font-size: 13px; }
+      .cartTotal strong { color: #172a32; font-size: 17px; }
+      .cartDisclaimer { color: #64757d; font-size: 11px; line-height: 1.5; }
+      .cartSubmit { margin-top: 12px; border-radius: 7px; }
+      .cartEmpty { display: grid; gap: 12px; margin: auto 0; justify-items: center; color: #65757c; }
+      .cartEmpty .btnGhost { border-radius: 7px; }
+      .requestedProductSummary { display: grid; gap: 7px; margin: 0 0 20px; padding: 13px; border: 1px solid #dce3e6; border-radius: 8px; background: #fff; font-size: 12px; }
+      .requestedProductSummary strong { color: #24363e; }
+      .requestedProductSummary span { color: #56676e; }
+      .marketplace :focus-visible, .cartDialog :focus-visible { outline: 3px solid rgba(191,127,28,.55); outline-offset: 2px; }
+      [data-theme="light"] .catalogFilters, [data-theme="light"] .catalogCount,
+      [data-theme="light"] .marketProductCard, [data-theme="light"] .catalogEmpty { background: #fff; }
+      [data-theme="dark"] .marketplace .marketplaceHeading h1,
+      [data-theme="dark"] .marketplace .marketProductBody h2,
+      [data-theme="dark"] .marketplace .productSpecifications h2 { color: #172a32; }
+      @media (max-width: 900px) {
+        .catalogLayout { grid-template-columns: 1fr; }
+        .catalogFilters { position: static; grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .catalogFilters h2, .catalogFilters .priceRange, .catalogFilters .filterReset { grid-column: 1 / -1; }
+      }
+      @media (max-width: 640px) {
+        .marketplaceHeading { align-items: flex-start; flex-direction: column; }
+        .catalogCount { display: flex; align-items: center; gap: 8px; }
+        .catalogFilters { grid-template-columns: 1fr; }
+        .catalogFilters h2, .catalogFilters .priceRange, .catalogFilters .filterReset { grid-column: auto; }
+        .marketProductGrid { grid-template-columns: 1fr; }
+        .marketProductBody { min-height: 290px; }
+        .productPhotographyLarge .photoUnavailable { min-height: 250px; }
+        .productDetailGrid { grid-template-columns: 1fr; }
+        .detailActions { align-items: stretch; }
+        .detailActions .btnPrimary, .detailActions .btnGhost { flex: 1 1 100%; }
+        .cartDialog { padding: 18px; }
+      }
       .erpShell { max-width: none; padding: 35px 0 60px; }
       .dashboardHeading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 0 0 22px; }
       .dashboardHeading h1 { margin-top: 4px; font-size: clamp(30px,4vw,42px); }

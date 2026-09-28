@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check vendor/vat.js && node --check test/vat.test.js && node --check test/browser-script.test.js",
+    "check": "node --check server.js && node --check vendor/vat.js && node --check vendor/catalog.js && node --check test/vat.test.js && node --check test/catalog.test.js && node --check test/server-routes.test.js && node --check test/browser-script.test.js",
     "test": "node --test"
   },
   "dependencies": {

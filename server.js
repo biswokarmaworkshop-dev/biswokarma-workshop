@@ -11,6 +11,7 @@ const htmlFile = path.join(__dirname, "biswokarma-workshop (1).html");
 const localDatabaseFile = path.join(__dirname, "workshop-state.json");
 const vendorDirectory = path.join(__dirname, "vendor");
 const imagesDirectory = path.join(__dirname, "images");
+const jcbProductCatalog = require("./data/jcb-parts.json");
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -135,6 +136,10 @@ function verifyWebhook(body, request) {
 }
 
 async function api(request, response, url) {
+  if (url.pathname === "/api/catalog/products" && request.method === "GET") {
+    response.setHeader("Cache-Control", "public, max-age=300");
+    return json(response, 200, { products: jcbProductCatalog });
+  }
   if (url.pathname === "/api/health" && request.method === "GET") {
     if (!pool)
       return json(response, 200, {
@@ -408,16 +413,20 @@ Sitemap: https://biswokarma-workshop-1.onrender.com/sitemap.xml`;
   });
 });
 
-initDatabase().then(() => {
-  server.listen(port, "0.0.0.0", () => {
-    console.log(`Biswokarma Workshop running at http://localhost:${port}`);
-    const nets = require("os").networkInterfaces();
-    for (const name of Object.keys(nets)) {
-      for (const net of nets[name]) {
-        if (net.family === "IPv4" && !net.internal) {
-          console.log(`LAN access: http://${net.address}:${port}`);
+if (require.main === module) {
+  initDatabase().then(() => {
+    server.listen(port, "0.0.0.0", () => {
+      console.log(`Biswokarma Workshop running at http://localhost:${port}`);
+      const nets = require("os").networkInterfaces();
+      for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+          if (net.family === "IPv4" && !net.internal) {
+            console.log(`LAN access: http://${net.address}:${port}`);
+          }
         }
       }
-    }
+    });
   });
-});
+}
+
+module.exports = { server };
