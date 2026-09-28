@@ -13,6 +13,18 @@ test("embedded React application script is valid JavaScript", () => {
   assert.doesNotThrow(() => new Function(scripts[scripts.length - 1][1]));
 });
 
+test("catalog script URL is versioned for cache invalidation", () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
+    "utf8",
+  );
+  assert.ok(
+    html.includes(
+      '<script src="/vendor/catalog.js?v=20260928-inventory-images"></script>',
+    ),
+  );
+});
+
 test("admin and owner dashboard session state is restored without persisting credentials", () => {
   const html = fs.readFileSync(
     path.join(__dirname, "..", "biswokarma-workshop (1).html"),
