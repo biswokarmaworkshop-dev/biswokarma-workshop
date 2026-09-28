@@ -1963,78 +1963,38 @@
       }
 
       const PARTS_STORY = BiswokarmaPartsStory.chapters;
-      function PartsStory({ onExplore }) {
+      function PartsStory({ onExplore, onQuote }) {
         const [activeChapter, setActiveChapter] = useState(0);
-        const chapterRefs = React.useRef([]);
-        const storyRef = React.useRef(null);
-
-        useEffect(() => {
-          let frame = 0;
-          const updateChapter = () => {
-            cancelAnimationFrame(frame);
-            frame = requestAnimationFrame(() => {
-              if (!storyRef.current) return;
-              const center = window.innerHeight * 0.5;
-              const nearest = BiswokarmaPartsStory.nearestChapterIndex(
-                chapterRefs.current
-                  .filter(Boolean)
-                  .map((element) => element.getBoundingClientRect()),
-                center,
-              );
-              setActiveChapter((current) =>
-                current === nearest ? current : nearest,
-              );
-            });
-          };
-          window.addEventListener("scroll", updateChapter, { passive: true });
-          window.addEventListener("resize", updateChapter, { passive: true });
-          updateChapter();
-          return () => {
-            cancelAnimationFrame(frame);
-            window.removeEventListener("scroll", updateChapter);
-            window.removeEventListener("resize", updateChapter);
-          };
-        }, []);
-
         const chapter = PARTS_STORY[activeChapter];
-        const jumpTo = (index) => {
-          const target = chapterRefs.current[index];
-          if (!target) return;
-          const reduceMotion =
-            window.matchMedia &&
-            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          target.scrollIntoView({
-            behavior: reduceMotion ? "auto" : "smooth",
-            block: "center",
-          });
-          target.querySelector("h2")?.focus({ preventScroll: true });
-        };
-
         return React.createElement(
           "section",
           {
             className: "partsStory",
-            ref: storyRef,
             "aria-labelledby": "parts-story-heading",
           },
           React.createElement(
             "header",
             { className: "storyIntro" },
-            React.createElement("span", { className: "storyKicker" }, "Biswokarma Workshop · JCB parts"),
-            React.createElement("h1", { id: "parts-story-heading" }, "Parts for the work ahead."),
-            React.createElement("p", null, "A field guide to the systems that keep your machine moving. Scroll to explore each chapter; move back up to retrace it."),
-            React.createElement("span", { className: "storyScrollCue", "aria-hidden": "true" }, "SCROLL TO EXPLORE ↓"),
+            React.createElement("span", { className: "storyKicker" }, "BISWOKARMA WORKSHOP · GORKHA, NEPAL"),
+            React.createElement("h1", { id: "parts-story-heading" }, "POWER YOUR JCB. KEEP IT MOVING."),
+            React.createElement("p", null, "Find a part and send the workshop a quote request. The team confirms supplier, machine fitment and availability before an order."),
+            React.createElement(
+              "div",
+              { className: "storyActions" },
+              React.createElement("button", { type: "button", className: "storyPrimaryAction", onClick: () => onExplore(null) }, "Browse all parts"),
+              React.createElement("button", { type: "button", className: "storySecondaryAction", onClick: onQuote }, "Request a quote"),
+            ),
           ),
           React.createElement(
             "div",
             { className: "storyJourney" },
             React.createElement(
               "aside",
-              { className: "storyStage" },
+              { className: "storyStage", "aria-label": "Abstract parts-system schematic" },
               React.createElement(
                 "div",
                 { className: "storyStageTopline" },
-                React.createElement("span", null, "SYSTEMS / 03DX"),
+                React.createElement("span", null, "PARTS SYSTEMS"),
                 React.createElement("span", null, `${String(activeChapter + 1).padStart(2, "0")} — 08`),
               ),
               React.createElement(
@@ -2049,19 +2009,12 @@
                 React.createElement("span", { className: "schematicCore" }, chapter.number),
                 React.createElement("span", { className: "schematicCross crossOne" }),
                 React.createElement("span", { className: "schematicCross crossTwo" }),
-                React.createElement("span", { className: "schematicCoordinates" }, "28°00′N 84°38′E"),
+                React.createElement("span", { className: "schematicCoordinates" }, "SCHEMATIC · NOT A PART IMAGE"),
               ),
-              React.createElement("span", { className: "storyStageLabel" }, chapter.metric),
-              React.createElement("h2", { className: "storyStageTitle" }, chapter.title),
-              React.createElement("p", { className: "storyStageStatement" }, chapter.statement),
+              React.createElement("span", { className: "storyStageLabel" }, "WORKSHOP GUIDE · FITMENT TO BE CONFIRMED"),
               React.createElement(
-                "div",
-                { className: "storyProgressTrack", role: "progressbar", "aria-label": "Parts story progress", "aria-valuemin": 1, "aria-valuemax": PARTS_STORY.length, "aria-valuenow": activeChapter + 1 },
-                React.createElement("span", { style: { width: `${((activeChapter + 1) / PARTS_STORY.length) * 100}%` } }),
-              ),
-              React.createElement(
-                "div",
-                { className: "storyChapterNav", "aria-label": "Parts story chapters" },
+                "nav",
+                { className: "storyChapterNav", "aria-label": "Browse parts categories" },
                 PARTS_STORY.map((item, index) =>
                   React.createElement(
                     "button",
@@ -2069,55 +2022,49 @@
                       key: item.id,
                       type: "button",
                       className: index === activeChapter ? "storyDot is-active" : "storyDot",
-                      "aria-label": `Chapter ${index + 1}: ${item.title}`,
-                      "aria-current": index === activeChapter ? "step" : undefined,
-                      onClick: () => jumpTo(index),
+                      "aria-pressed": index === activeChapter,
+                      onClick: () => setActiveChapter(index),
                     },
-                    React.createElement("span", null, item.number),
+                    React.createElement("span", null, item.title),
                   ),
                 ),
               ),
             ),
             React.createElement(
               "div",
-              { className: "storyChapters" },
-              PARTS_STORY.map((item, index) =>
+              { className: "storyChapters", "aria-live": "polite" },
+              React.createElement(
+                "article",
+                {
+                  className: "storyChapter is-active",
+                  key: chapter.id,
+                  "aria-labelledby": `story-chapter-${chapter.id}`,
+                },
                 React.createElement(
-                  "article",
+                  "div",
+                  { className: "chapterMeta" },
+                  React.createElement("span", null, `PARTS CATEGORY / ${chapter.number}`),
+                  React.createElement("span", null, "FITMENT CONFIRMATION REQUIRED"),
+                ),
+                React.createElement("h2", { id: `story-chapter-${chapter.id}` }, chapter.title),
+                React.createElement("p", { className: "chapterStatement" }, chapter.statement),
+                React.createElement("p", { className: "chapterDetail" }, chapter.detail),
+                React.createElement(
+                  "ul",
+                  { className: "chapterSystems", "aria-label": "Parts listed in this category" },
+                  chapter.systems.map((system) =>
+                    React.createElement("li", { key: system }, system),
+                  ),
+                ),
+                React.createElement(
+                  "button",
                   {
-                    className: index === activeChapter ? "storyChapter is-active" : "storyChapter",
-                    key: item.id,
-                    ref: (element) => {
-                      chapterRefs.current[index] = element;
-                    },
-                    "aria-labelledby": `story-chapter-${item.id}`,
+                    type: "button",
+                    className: "chapterExplore",
+                    onClick: () => onExplore(chapter.productIds),
                   },
-                  React.createElement(
-                    "div",
-                    { className: "chapterMeta" },
-                    React.createElement("span", null, `FIELD NOTE / ${item.number}`),
-                    React.createElement("span", null, "JCB 3DX · 444"),
-                  ),
-                  React.createElement("h2", { id: `story-chapter-${item.id}`, tabIndex: -1 }, item.title),
-                  React.createElement("p", { className: "chapterStatement" }, item.statement),
-                  React.createElement("p", { className: "chapterDetail" }, item.detail),
-                  React.createElement(
-                    "ul",
-                    { className: "chapterSystems", "aria-label": "Catalog references in this chapter" },
-                    item.systems.map((system) =>
-                      React.createElement("li", { key: system }, system),
-                    ),
-                  ),
-                  React.createElement(
-                    "button",
-                    {
-                      type: "button",
-                      className: "chapterExplore",
-                      onClick: () => onExplore(item.productIds),
-                    },
-                    "Explore these parts",
-                    React.createElement("span", { "aria-hidden": "true" }, " ↘"),
-                  ),
+                  "View matching quote-request listings",
+                  React.createElement("span", { "aria-hidden": "true" }, " ↘"),
                 ),
               ),
             ),
@@ -2137,10 +2084,6 @@
           query: "",
           model: "",
           category: "",
-          brand: "",
-          minimumPrice: "",
-          maximumPrice: "",
-          inStock: false,
           productIds: null,
         });
         const models = Array.from(
@@ -2149,24 +2092,18 @@
         const categories = Array.from(
           new Set(products.map((product) => product.category)),
         );
-        const brands = Array.from(new Set(products.map((product) => product.brand)));
         const filtered = Catalog.filterProducts(products, filters);
         const update = (key) => (event) =>
           setFilters({
             ...filters,
             productIds: null,
-            [key]:
-              key === "inStock" ? event.target.checked : event.target.value,
+            [key]: event.target.value,
           });
         const resetFilters = () =>
           setFilters({
             query: "",
             model: "",
             category: "",
-            brand: "",
-            minimumPrice: "",
-            maximumPrice: "",
-            inStock: false,
             productIds: null,
           });
         const exploreChapter = (productIds) => {
@@ -2174,11 +2111,7 @@
             query: "",
             model: "",
             category: "",
-            brand: "",
-            minimumPrice: "",
-            maximumPrice: "",
-            inStock: false,
-            productIds,
+            productIds: Array.isArray(productIds) ? productIds : null,
           });
           const reduceMotion =
             window.matchMedia &&
@@ -2208,7 +2141,7 @@
         return React.createElement(
           "section",
           { className: "pageSection marketplace" },
-          React.createElement(PartsStory, { onExplore: exploreChapter }),
+          React.createElement(PartsStory, { onExplore: exploreChapter, onQuote: () => nav("contact") }),
           React.createElement(
             "div",
             { className: "marketplaceHeading catalogHeading" },
@@ -2216,20 +2149,20 @@
               "div",
               null,
               React.createElement("span", { className: "marketplaceEyebrow" }, "Biswokarma Workshop · Gorkha, Nepal"),
-              React.createElement("h2", null, "Search the parts catalog"),
-              React.createElement("p", null, "Filter catalog and saved workshop-inventory references by name, fitment, category, supplier brand or price."),
+              React.createElement("h2", null, "Search parts & workshop inventory"),
+              React.createElement("p", null, "Filter demo catalog references and saved workshop-inventory records by name, recorded machine and category."),
             ),
             React.createElement(
               "div",
               { className: "catalogCount", "aria-live": "polite" },
               React.createElement("strong", null, products.length),
-              React.createElement("span", null, "catalog references"),
+              React.createElement("span", null, "listed records"),
             ),
           ),
           React.createElement(
             "div",
             { className: "catalogNotice", role: "note" },
-            "POC catalog: new reference prices are indicative NPR estimates; existing workshop inventory prices and stock are shown from saved records. Supplier brands and OEM part numbers are unverified. Confirm fitment, live availability and final VAT-inclusive price with the workshop. No product photos are shown until licensed supplier images are supplied.",
+            "Catalog entries are unverified demo references, not confirmed fitments or supplier stock. Demo prices and specifications are not provided; request a quote and confirm the machine serial number with the workshop. Saved workshop inventory is shown separately using its recorded values. No part photos are available yet.",
           ),
           React.createElement(
             "div",
@@ -2241,10 +2174,10 @@
               React.createElement(
                 "label",
                 null,
-                "Search name or part number",
+                "Search name or workshop reference",
                 React.createElement("input", {
                   type: "search",
-                  placeholder: "e.g. BW-JCB3DX-003",
+                  placeholder: "e.g. Hydraulic Pump",
                   value: filters.query,
                   onChange: update("query"),
                 }),
@@ -2252,7 +2185,7 @@
               React.createElement(
                 "label",
                 null,
-                "JCB model",
+                "Machine recorded",
                 React.createElement(
                   "select",
                   { value: filters.model, onChange: update("model") },
@@ -2276,48 +2209,6 @@
                 ),
               ),
               React.createElement(
-                "label",
-                null,
-                "Supplier brand",
-                React.createElement(
-                  "select",
-                  { value: filters.brand, onChange: update("brand") },
-                  React.createElement("option", { value: "" }, "All brands"),
-                  brands.map((brand) =>
-                    React.createElement("option", { key: brand, value: brand }, brand),
-                  ),
-                ),
-              ),
-              React.createElement(
-                "fieldset",
-                { className: "priceRange" },
-                React.createElement("legend", null, "Indicative NPR price"),
-                React.createElement("label", null, "From", React.createElement("input", {
-                  type: "number",
-                  min: "0",
-                  inputMode: "numeric",
-                  value: filters.minimumPrice,
-                  onChange: update("minimumPrice"),
-                })),
-                React.createElement("label", null, "To", React.createElement("input", {
-                  type: "number",
-                  min: "0",
-                  inputMode: "numeric",
-                  value: filters.maximumPrice,
-                  onChange: update("maximumPrice"),
-                })),
-              ),
-              React.createElement(
-                "label",
-                { className: "inStockFilter" },
-                React.createElement("input", {
-                  type: "checkbox",
-                  checked: filters.inStock,
-                  onChange: update("inStock"),
-                }),
-                "In stock now",
-              ),
-              React.createElement(
                 "button",
                 {
                   className: "filterReset",
@@ -2333,7 +2224,7 @@
               React.createElement(
                 "p",
                 { className: "resultCount", "aria-live": "polite" },
-                `${filtered.length} of ${products.length} parts`,
+                `${filtered.length} of ${products.length} listed records`,
               ),
               filtered.length
                 ? React.createElement(
@@ -2366,8 +2257,10 @@
                               product.name,
                             ),
                           ),
-                          React.createElement("p", { className: "productNumber" }, product.partNumber),
-                          React.createElement("p", { className: "cardCompatibility" }, product.compatibleModels.join(" · ")),
+                          React.createElement("p", { className: "productNumber" }, `${product.partNumber} · workshop reference, not OEM`),
+                          product.compatibleModels.length
+                            ? React.createElement("p", { className: "cardCompatibility" }, `Machine recorded: ${product.compatibleModels.join(" · ")} · confirm exact fitment`)
+                            : React.createElement("p", { className: "cardCompatibility" }, "Machine and serial-number fitment to be confirmed"),
                           React.createElement(
                             "p",
                             { className: "productCardAvailability" },
@@ -2377,14 +2270,14 @@
                                 ? `${product.stock} in workshop stock · confirm before ordering`
                                 : "Currently out of stock",
                           ),
-                          React.createElement("strong", { className: "marketPrice" }, formatNpr(product.priceNpr)),
-                          React.createElement(
-                            "span",
-                            { className: "priceDisclaimer" },
-                            product.catalogSource === "workshop_inventory"
-                              ? "Stored workshop price · VAT included"
-                              : "Indicative · confirm current price",
-                          ),
+                          product.catalogSource === "workshop_inventory" && product.priceNpr > 0
+                            ? React.createElement(
+                                React.Fragment,
+                                null,
+                                React.createElement("strong", { className: "marketPrice" }, formatNpr(product.priceNpr)),
+                                React.createElement("span", { className: "priceDisclaimer" }, "Stored workshop price · VAT included"),
+                              )
+                            : React.createElement("strong", { className: "marketPrice" }, "Request a quote"),
                           React.createElement(
                             "div",
                             { className: "productCardActions" },
@@ -2418,9 +2311,7 @@
                     React.createElement(
                       "p",
                       null,
-                      filters.inStock
-                        ? "Live inventory is not connected yet, so stock cannot be verified for this POC catalog. Contact the workshop to check availability."
-                        : "Try clearing a filter or send an inquiry and the workshop can check supplier availability.",
+                      "Try clearing a filter or send an inquiry and the workshop can check supplier availability.",
                     ),
                   ),
             ),
@@ -2463,16 +2354,28 @@
               { className: "productDetailCopy" },
               React.createElement("span", { className: "marketplaceEyebrow" }, product.category),
               React.createElement("h1", null, product.name),
-              React.createElement("p", { className: "productNumber" }, `Workshop part reference: ${product.partNumber} · not an OEM part number`),
-              React.createElement("p", { className: "productFit" }, `Compatibility listing: ${product.compatibleModels.join(", ")}. Confirm exact fit by serial number.`),
+              React.createElement("p", { className: "productNumber" }, `Workshop reference (not an OEM part number): ${product.partNumber}`),
+              React.createElement(
+                "p",
+                { className: "productFit" },
+                product.compatibleModels.length
+                  ? `Machine recorded: ${product.compatibleModels.join(", ")}. Confirm exact fit by serial number.`
+                  : "This demo listing does not confirm machine fitment or specifications. Confirm the model and serial number with the workshop.",
+              ),
               React.createElement("p", { className: "productBrand" }, `Supplier brand: ${product.brand}`),
-              React.createElement("p", { className: "productPrice" }, formatNpr(product.priceNpr)),
+              React.createElement(
+                "p",
+                { className: "productPrice" },
+                product.catalogSource === "workshop_inventory" && product.priceNpr > 0
+                  ? formatNpr(product.priceNpr)
+                  : "Request a quote",
+              ),
               React.createElement(
                 "p",
                 { className: "priceDisclaimer" },
-                product.catalogSource === "workshop_inventory"
-                  ? "Stored workshop inventory price · VAT included."
-                  : "Indicative estimate · VAT-inclusive treatment follows workshop pricing; confirm final price before ordering.",
+                product.catalogSource === "workshop_inventory" && product.priceNpr > 0
+                  ? "Stored workshop inventory price · VAT included; confirm it is current."
+                  : "No verified supplier price is available for this listing.",
               ),
               React.createElement(
                 "p",
@@ -2525,7 +2428,7 @@
           React.createElement(
             "section",
             { className: "productSpecifications", "aria-labelledby": "specifications-heading" },
-            React.createElement("h2", { id: "specifications-heading" }, "Specifications & fitment"),
+            React.createElement("h2", { id: "specifications-heading" }, "Fitment & ordering notes"),
             React.createElement(
               "dl",
               { className: "specificationList" },
@@ -2541,7 +2444,13 @@
                 "div",
                 null,
                 React.createElement("dt", null, "Compatibility"),
-                React.createElement("dd", null, product.compatibleModels.join(", ")),
+                React.createElement(
+                  "dd",
+                  null,
+                  product.compatibleModels.length
+                    ? `${product.compatibleModels.join(", ")} · confirm exact serial-number fitment`
+                    : "Not verified · confirm model and serial number with the workshop",
+                ),
               ),
               React.createElement(
                 "div",
@@ -2586,10 +2495,6 @@
             product: products.find((product) => product.id === item.productId),
           }))
           .filter((item) => item.product);
-        const total = rows.reduce(
-          (sum, item) => sum + item.product.priceNpr * item.quantity,
-          0,
-        );
         return React.createElement(
           "div",
           {
@@ -2656,7 +2561,13 @@
                         { key: item.productId },
                         React.createElement("strong", null, item.product.name),
                         React.createElement("span", { className: "productNumber" }, item.product.partNumber),
-                        React.createElement("span", null, `${formatNpr(item.product.priceNpr)} each · indicative`),
+                        React.createElement(
+                          "span",
+                          null,
+                          item.product.catalogSource === "workshop_inventory" && item.product.priceNpr > 0
+                            ? `${formatNpr(item.product.priceNpr)} each · stored workshop price`
+                            : "Price: request a quote",
+                        ),
                         React.createElement(
                           "div",
                           { className: "cartLineControls" },
@@ -2695,8 +2606,7 @@
                       ),
                     ),
                   ),
-                  React.createElement("p", { className: "cartTotal" }, "Indicative subtotal ", React.createElement("strong", null, formatNpr(total))),
-                  React.createElement("p", { className: "cartDisclaimer" }, "Quote request only. Stock and final price are confirmed by the workshop; this cart does not reserve or deduct inventory."),
+                  React.createElement("p", { className: "cartDisclaimer" }, "Quote request only. The workshop confirms fitment, availability and current prices; this cart does not reserve or deduct inventory."),
                   React.createElement("button", { className: "btnPrimary cartSubmit", type: "button", onClick: () => onInquiry(rows) }, "Request a quote"),
                 )
               : React.createElement(
@@ -7487,8 +7397,8 @@
         position: relative;
         isolation: isolate;
         overflow: clip;
-        margin: -48px calc(50% - 50vw) 70px;
-        padding: clamp(38px, 6vw, 82px) max(24px, calc((100vw - 1320px) / 2));
+        margin: -48px calc(50% - 50vw) 42px;
+        padding: clamp(28px, 4vw, 52px) max(24px, calc((100vw - 1320px) / 2));
         color: #f1f3f2;
         background:
           radial-gradient(ellipse at 79% 6%, rgba(222,170,35,.11), transparent 35%),
@@ -7507,7 +7417,7 @@
         mask-image: linear-gradient(to bottom, transparent, #000 13%, #000 88%, transparent);
         pointer-events: none;
       }
-      .storyIntro { max-width: 850px; min-height: 58svh; display: flex; flex-direction: column; justify-content: center; padding: 34px 0; }
+      .storyIntro { max-width: 980px; padding: 0; }
       .storyKicker, .storyStageTopline, .chapterMeta, .storyStageLabel {
         color: #c9a84f;
         font-size: 10px;
@@ -7516,35 +7426,36 @@
         text-transform: uppercase;
       }
       .storyIntro h1 {
-        max-width: 800px;
-        margin: 18px 0;
+        max-width: 920px;
+        margin: 10px 0;
         color: #f4f3ed;
-        font: 650 clamp(42px, 7.2vw, 94px)/.98 Inter, "Segoe UI", Arial, sans-serif;
+        font: 680 clamp(38px, 5vw, 66px)/.98 Inter, "Segoe UI", Arial, sans-serif;
         letter-spacing: -.065em;
         text-transform: none;
       }
-      .storyIntro p { max-width: 540px; margin: 0; color: #a6afb2; font-size: 15px; line-height: 1.7; }
-      .storyScrollCue { margin-top: 44px; color: #c9a84f; font-size: 9px; letter-spacing: .18em; }
-      .storyJourney { display: grid; grid-template-columns: minmax(0,.91fr) minmax(330px,.72fr); align-items: start; gap: clamp(42px, 9vw, 150px); }
+      .storyIntro p { max-width: 640px; margin: 0; color: #a6afb2; font-size: 14px; line-height: 1.6; }
+      .storyActions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 17px; }
+      .storyPrimaryAction, .storySecondaryAction { min-height: 40px; padding: 10px 15px; border-radius: 5px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+      .storyPrimaryAction { border: 1px solid #d6b757; background: #d6b757; color: #14191a; }
+      .storySecondaryAction { border: 1px solid rgba(255,255,255,.28); background: transparent; color: #f1f3f2; }
+      .storyPrimaryAction:focus-visible, .storySecondaryAction:focus-visible { outline: 3px solid #f1d783; outline-offset: 3px; }
+      .storyJourney { display: grid; grid-template-columns: minmax(0,.86fr) minmax(0,1.14fr); align-items: stretch; gap: 22px; margin-top: 24px; }
       .storyStage {
-        position: sticky;
-        top: 20px;
         display: flex;
-        min-height: min(740px,calc(100svh - 40px));
+        min-height: 0;
         flex-direction: column;
-        justify-content: center;
-        padding: 28px;
+        padding: 18px;
         border: 1px solid rgba(230,235,230,.17);
-        border-radius: 2px;
+        border-radius: 8px;
         background: linear-gradient(145deg,rgba(33,41,43,.97),rgba(12,16,17,.97) 74%);
-        box-shadow: 0 26px 72px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.05);
+        box-shadow: 0 14px 38px rgba(0,0,0,.2), inset 0 1px rgba(255,255,255,.05);
       }
       .storyStageTopline { display: flex; justify-content: space-between; gap: 12px; color: #849197; font-size: 9px; }
       .storySchematic {
         position: relative;
         display: grid;
-        min-height: clamp(190px, 31vh, 310px);
-        margin: 24px 0 26px;
+        min-height: 150px;
+        margin: 15px 0 13px;
         overflow: hidden;
         place-items: center;
         border: 1px solid rgba(230,235,230,.12);
@@ -7559,7 +7470,7 @@
       .schematicCore { z-index: 1; display: grid; width: 58px; aspect-ratio: 1; place-items: center; border: 1px solid #d6b757; border-radius: 50%; background: #161c1d; color: #f0d98c; font-size: 12px; font-weight: 700; box-shadow: 0 0 44px rgba(224,183,60,.14); }
       .schematicCross { position: absolute; width: min(76%,330px); height: 1px; background: linear-gradient(90deg,transparent,rgba(221,190,112,.53),transparent); transform: rotate(32deg); }
       .crossTwo { transform: rotate(-32deg); background: linear-gradient(90deg,transparent,rgba(213,222,220,.32),transparent); }
-      .schematicCoordinates { position: absolute; right: 12px; bottom: 10px; color: #798589; font: 9px/1.4 ui-monospace,Consolas,monospace; letter-spacing: .08em; }
+      .schematicCoordinates { position: absolute; right: 8px; bottom: 7px; color: #9ca6a9; font: 8px/1.4 ui-monospace,Consolas,monospace; letter-spacing: .08em; }
       .schematic-engine .orbitOne { border-radius: 22%; transform: rotate(45deg) scale(.84); }
       .schematic-filters .orbitOne { width: min(70%,260px); border-radius: 3px; transform: rotate(0) scaleY(.67); }
       .schematic-transmission .orbitTwo { border-radius: 8px; transform: rotate(-40deg) scale(.7); }
@@ -7567,25 +7478,21 @@
       .schematic-attachments .orbitOne { width: min(73%,270px); aspect-ratio: 1.5; border-radius: 2px; transform: rotate(-25deg); }
       .schematic-electrical .orbitTwo { width: min(36%,140px); border-radius: 0; transform: rotate(45deg) scaleY(.42); }
       .schematic-seals .orbitOne { border-radius: 38%; transform: rotate(-20deg) scale(.72); }
-      .storyStageLabel { color: #849197; font-size: 9px; }
-      .storyStageTitle { margin: 9px 0 7px; color: #f3f2eb; font: 620 clamp(27px,3vw,42px)/1.04 Inter,"Segoe UI",Arial,sans-serif; letter-spacing: -.04em; text-transform: none; }
-      .storyStageStatement { min-height: 25px; margin: 0; color: #a6afb2; font-size: 13px; }
-      .storyProgressTrack { height: 2px; margin-top: 27px; overflow: hidden; background: rgba(255,255,255,.13); }
-      .storyProgressTrack span { display: block; height: 100%; background: #d4b344; transition: width .25s ease; }
-      .storyChapterNav { display: flex; justify-content: space-between; gap: 6px; margin-top: 14px; }
-      .storyDot { display: grid; width: 31px; height: 31px; flex: 0 0 31px; place-items: center; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; background: transparent; color: #849197; font: inherit; cursor: pointer; }
-      .storyDot span { font-size: 8px; }
+      .storyStageLabel { color: #9ba7aa; font-size: 8px; line-height: 1.5; letter-spacing: .1em; }
+      .storyChapterNav { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; margin-top: 12px; }
+      .storyDot { display: flex; min-height: 34px; align-items: center; padding: 6px 8px; border: 1px solid rgba(255,255,255,.15); border-radius: 4px; background: transparent; color: #aeb7b8; font: inherit; text-align: left; cursor: pointer; }
+      .storyDot span { font-size: 10px; line-height: 1.25; }
       .storyDot:hover, .storyDot.is-active { border-color: #d4b344; background: rgba(212,179,68,.12); color: #f1d783; }
-      .storyDot:focus-visible, .chapterExplore:focus-visible { outline: 3px solid #f1d783; outline-offset: 4px; }
-      .storyChapters { min-width: 0; }
-      .storyChapter { display: flex; min-height: 76svh; flex-direction: column; justify-content: center; padding: 36px 0; opacity: .4; transition: opacity .3s ease; }
-      .storyChapter.is-active { opacity: 1; }
+      .storyDot:focus-visible, .chapterExplore:focus-visible { outline: 3px solid #f1d783; outline-offset: 3px; }
+      .storyChapters { min-width: 0; display: flex; }
+      .storyChapter { display: flex; width: 100%; flex-direction: column; justify-content: center; padding: 22px; border: 1px solid rgba(230,235,230,.13); border-radius: 8px; background: rgba(21,27,28,.82); animation: chapter-enter .2s ease-out; }
+      @keyframes chapter-enter { from { opacity: .55; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
       .chapterMeta { display: flex; justify-content: space-between; gap: 10px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,.14); color: #829096; font-size: 8px; }
-      .storyChapter h2 { margin: 25px 0 12px; color: #f1f1eb; font: 610 clamp(35px,4.3vw,60px)/1 Inter,"Segoe UI",Arial,sans-serif; letter-spacing: -.05em; text-transform: none; }
-      .chapterStatement { margin: 0 0 14px; color: #e1c66f; font-size: clamp(17px,1.7vw,22px); letter-spacing: -.02em; }
-      .chapterDetail { max-width: 500px; margin: 0; color: #a5afb2; font-size: 13px; line-height: 1.75; }
-      .chapterSystems { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 16px; margin: 23px 0 27px; padding: 0; list-style: none; }
-      .chapterSystems li { padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.11); color: #d9ddda; font-size: 11px; }
+      .storyChapter h2 { margin: 17px 0 9px; color: #f1f1eb; font: 610 clamp(28px,3.1vw,40px)/1.05 Inter,"Segoe UI",Arial,sans-serif; letter-spacing: -.05em; text-transform: none; }
+      .chapterStatement { margin: 0 0 10px; color: #e1c66f; font-size: clamp(16px,1.6vw,20px); letter-spacing: -.02em; }
+      .chapterDetail { max-width: 560px; margin: 0; color: #a5afb2; font-size: 12px; line-height: 1.65; }
+      .chapterSystems { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 14px; margin: 13px 0 16px; padding: 0; list-style: none; }
+      .chapterSystems li { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.11); color: #d9ddda; font-size: 10px; }
       .chapterSystems li::before { margin-right: 9px; color: #d4b344; content: "↳"; }
       .chapterExplore { align-self: flex-start; padding: 11px 0; border: 0; border-bottom: 1px solid #bc9d47; background: none; color: #f0d782; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
       .storyHeadingFallback { display: none; }
@@ -7619,10 +7526,6 @@
       .catalogFilters > label, .priceRange label { display: grid; gap: 6px; color: #475861; font-size: 12px; font-weight: 650; }
       .catalogFilters input:not([type="checkbox"]), .catalogFilters select, .quantityField input, .cartLineControls input { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid #cbd5da; border-radius: 7px; background: #fff; color: #1b2b32; font: inherit; font-size: 13px; text-transform: none; }
       .catalogFilters input:focus-visible, .catalogFilters select:focus-visible, .quantityField input:focus-visible, .cartLineControls input:focus-visible { outline: 3px solid rgba(208,145,37,.35); outline-offset: 1px; border-color: #b87814; }
-      .priceRange { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; padding: 12px 0 0; border: 0; border-top: 1px solid var(--market-line); }
-      .priceRange legend { grid-column: 1 / -1; padding: 0 0 9px; color: #475861; font-size: 12px; font-weight: 700; }
-      .inStockFilter { display: flex !important; grid-template-columns: auto 1fr !important; align-items: center; gap: 9px !important; }
-      .inStockFilter input { width: 17px; height: 17px; accent-color: #a86a0c; }
       .filterReset, .productDetailsLink, .marketplaceHelp button { padding: 8px 0; border: 0; background: none; color: #80540f; font: inherit; font-size: 12px; font-weight: 700; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
       .catalogResults { min-width: 0; }
       .resultCount { margin: 0 0 12px; color: var(--market-muted); font-size: 12px; }
@@ -7636,7 +7539,7 @@
       .photoUnavailable { display: grid; min-height: 110px; place-items: center; margin: 0; padding: 18px; border-bottom: 1px solid #edf0f1; background: #f6f8f8; color: #66767e; font-size: 11px; text-align: center; }
       .productPhotographyLarge .photoUnavailable { min-height: 390px; border: 1px solid var(--market-line); border-radius: 14px; font-size: 13px; }
       .productPhotographyLarge .productPhoto img { min-height: 390px; }
-      .marketProductBody { display: flex; min-height: 320px; flex-direction: column; align-items: flex-start; padding: 16px; }
+      .marketProductBody { display: flex; min-height: 260px; flex-direction: column; align-items: flex-start; padding: 16px; }
       .productCategory { color: #7d5b27; font-size: 10px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
       .marketProductBody h2 { margin: 7px 0 5px; font-size: 17px; line-height: 1.3; }
       .marketProductBody h2 a { color: inherit; text-decoration: none; }
@@ -7705,42 +7608,30 @@
       [data-theme="dark"] .marketplace .marketProductBody h2,
       [data-theme="dark"] .marketplace .productSpecifications h2 { color: #172a32; }
       @media (max-width: 900px) {
-        .storyJourney { grid-template-columns: minmax(0,.9fr) minmax(280px,.8fr); gap: 36px; }
-        .storyStage { padding: 21px; }
-        .storyDot { width: 27px; height: 27px; flex-basis: 27px; }
+        .storyJourney { grid-template-columns: minmax(0,.86fr) minmax(0,1.14fr); gap: 14px; }
+        .storyStage { padding: 14px; }
         .catalogLayout { grid-template-columns: 1fr; }
         .catalogFilters { position: static; grid-template-columns: repeat(2,minmax(0,1fr)); }
-        .catalogFilters h2, .catalogFilters .priceRange, .catalogFilters .filterReset { grid-column: 1 / -1; }
+        .catalogFilters h2, .catalogFilters .filterReset { grid-column: 1 / -1; }
       }
       @media (max-width: 640px) {
-        .partsStory { margin-top: -34px; padding: 40px 18px 38px; }
-        .storyIntro { min-height: 54svh; min-height: 54dvh; }
-        .storyIntro h1 { font-size: clamp(42px,14vw,70px); }
-        .storyIntro p { font-size: 13px; }
-        .storyScrollCue { margin-top: 28px; }
-        .storyJourney { display: flex; flex-direction: column; gap: 0; }
-        .storyStage { position: sticky; z-index: 3; top: 0; order: 0; min-height: 0; width: 100%; padding: 12px 14px; border-inline: 0; border-radius: 0 0 10px 10px; }
-        .storySchematic { min-height: 78px; margin: 8px 0; }
-        .storyStageTopline { font-size: 8px; }
-        .storyStageTitle { margin: 5px 0 3px; font-size: 22px; }
-        .storyStageStatement { font-size: 11px; }
-        .storyStageLabel { font-size: 8px; }
-        .storyProgressTrack { margin-top: 10px; }
-        .storyChapterNav { margin-top: 7px; }
-        .storyDot { width: 30px; height: 30px; flex-basis: 30px; }
-        .storyChapters { display: grid; width: 100%; }
-        .storyChapter { min-height: 68svh; min-height: 68dvh; padding: 46px 4px; opacity: .74; }
-        .storyChapter.is-active { opacity: 1; }
-        .storyChapter h2 { margin-top: 20px; font-size: clamp(36px,10vw,48px); }
+        .partsStory { margin-top: -34px; padding: 28px 18px 30px; }
+        .storyIntro h1 { font-size: clamp(38px,11vw,56px); }
+        .storyIntro p { font-size: 12px; }
+        .storyJourney { grid-template-columns: minmax(0,1fr); gap: 10px; margin-top: 18px; }
+        .storyStage { position: static; width: 100%; padding: 13px; border-radius: 7px; }
+        .storySchematic { min-height: 110px; margin: 10px 0; }
+        .storyChapter { min-height: 0; padding: 18px; }
+        .chapterMeta { font-size: 7px; }
         .chapterDetail { font-size: 12px; }
         .chapterSystems { gap: 0 10px; }
         .chapterSystems li { font-size: 10px; }
         .marketplaceHeading { align-items: flex-start; flex-direction: column; }
         .catalogCount { display: flex; align-items: center; gap: 8px; }
         .catalogFilters { grid-template-columns: 1fr; }
-        .catalogFilters h2, .catalogFilters .priceRange, .catalogFilters .filterReset { grid-column: auto; }
+        .catalogFilters h2, .catalogFilters .filterReset { grid-column: auto; }
         .marketProductGrid { grid-template-columns: 1fr; }
-        .marketProductBody { min-height: 290px; }
+        .marketProductBody { min-height: 250px; }
         .productPhotographyLarge .photoUnavailable { min-height: 250px; }
         .productDetailGrid { grid-template-columns: 1fr; }
         .detailActions { align-items: stretch; }

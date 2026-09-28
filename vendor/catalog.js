@@ -56,10 +56,26 @@
     };
   }
 
+  function catalogListing(product) {
+    return {
+      ...product,
+      brand: "Supplier details unverified",
+      brandVerified: false,
+      priceNpr: null,
+      priceBasis: "Request a quote; no verified supplier price",
+      stock: null,
+      availability: "confirm_with_workshop",
+      compatibleModels: [],
+      description:
+        "Unverified demo catalog entry for quote requests. Confirm supplier, exact machine and serial-number fitment, specifications, price and availability with the workshop.",
+      specs: {},
+      images: [],
+      catalogSource: "demo_catalog",
+    };
+  }
+
   function filterProducts(products, filters) {
     const query = String(filters.query || "").trim().toLowerCase();
-    const minimum = filters.minimumPrice === "" ? null : Number(filters.minimumPrice);
-    const maximum = filters.maximumPrice === "" ? null : Number(filters.maximumPrice);
     return products.filter((product) => {
       const searchable = [
         product.name,
@@ -79,10 +95,6 @@
       if (filters.model && !(product.compatibleModels || []).includes(filters.model))
         return false;
       if (filters.category && product.category !== filters.category) return false;
-      if (filters.brand && product.brand !== filters.brand) return false;
-      if (minimum !== null && product.priceNpr < minimum) return false;
-      if (maximum !== null && product.priceNpr > maximum) return false;
-      if (filters.inStock && !(Number(product.stock) > 0)) return false;
       return true;
     });
   }
@@ -152,6 +164,7 @@
   return {
     addToCart,
     buildInquiry,
+    catalogListing,
     filterProducts,
     findProductBySlug,
     inventoryListing,

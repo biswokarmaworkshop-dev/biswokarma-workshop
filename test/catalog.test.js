@@ -6,13 +6,14 @@ const products = require("../data/jcb-parts.json");
 const {
   addToCart,
   buildInquiry,
+  catalogListing,
   filterProducts,
   findProductBySlug,
   inventoryListing,
   productSlug,
   verifiedImages,
 } = require("../vendor/catalog");
-const { chapters, nearestChapterIndex } = require("../vendor/parts-story");
+const { chapters } = require("../vendor/parts-story");
 
 const requestedNames = [
   "JCB 3DX Bucket Teeth",
@@ -55,7 +56,7 @@ test("catalog contains exactly the 30 requested named products", () => {
   );
 });
 
-test("each catalog record has structured, explicit NPR price, stock and photo data", () => {
+test("demo catalog records do not expose invented prices, fitment, specifications or images", () => {
   const ids = new Set();
   const partNumbers = new Set();
   for (const product of products) {
@@ -67,44 +68,48 @@ test("each catalog record has structured, explicit NPR price, stock and photo da
     ids.add(product.id);
     partNumbers.add(product.partNumber);
     assert.ok(product.partNumberType.includes("not an OEM"));
-    assert.equal(product.brandVerified, false);
-    assert.equal(product.priceBasis, "Indicative estimate; confirm before ordering");
-    assert.ok(Number.isFinite(product.priceNpr) && product.priceNpr > 0);
-    assert.equal(product.stock, null);
-    assert.equal(product.availability, "confirm_with_workshop");
-    assert.ok(product.compatibleModels.length > 0);
-    assert.ok(product.category && product.description && product.specs);
-    assert.deepEqual(product.images, []);
+    const listing = catalogListing(product);
+    assert.equal(listing.catalogSource, "demo_catalog");
+    assert.equal(listing.priceNpr, null);
+    assert.match(listing.priceBasis, /no verified supplier price/);
+    assert.equal(listing.stock, null);
+    assert.equal(listing.availability, "confirm_with_workshop");
+    assert.deepEqual(listing.compatibleModels, []);
+    assert.deepEqual(listing.specs, {});
+    assert.match(listing.description, /confirm supplier.*serial-number fitment/i);
+    assert.equal(listing.brandVerified, false);
+    assert.equal(listing.partNumberType, product.partNumberType);
+    assert.deepEqual(listing.images, []);
   }
 });
 
-test("search matches exact names, part numbers and model/category/brand filters", () => {
+test("search supports demo names and workshop references without fabricated machine matches", () => {
+  const listings = products.map(catalogListing);
   assert.deepEqual(
-    filterProducts(products, { query: "BW-JCB3DX-003" }).map((product) => product.name),
+    filterProducts(listings, { query: "BW-JCB3DX-003" }).map((product) => product.name),
     ["JCB 3DX Hydraulic Pump"],
   );
   assert.equal(
-    filterProducts(products, { query: "hydraulic", model: "JCB 3DX" }).length,
+    filterProducts(listings, { query: "hydraulic" }).length,
     9,
   );
   assert.equal(
-    filterProducts(products, { category: "Electrical" }).length,
+    filterProducts(listings, { category: "Electrical" }).length,
     2,
   );
-  assert.equal(
-    filterProducts(products, {
-      brand: "Supplier brand unverified",
-      minimumPrice: 25000,
-      maximumPrice: 70000,
-    }).length,
-    4,
-  );
-  assert.deepEqual(filterProducts(products, { inStock: true }), []);
+  assert.deepEqual(filterProducts(listings, { model: "JCB 3DX" }), []);
   assert.deepEqual(
-    filterProducts(products, { productIds: ["jcb3dx-001", "jcb3dx-002"] }).map(
+    filterProducts(listings, { productIds: ["jcb3dx-001", "jcb3dx-002"] }).map(
       (product) => product.id,
     ),
     ["jcb3dx-001", "jcb3dx-002"],
+  );
+  assert.equal(
+    filterProducts(
+      [inventoryListing({ id: "saved", name: "Recorded pump", machine: "JCB 3DX" })],
+      { model: "JCB 3DX" },
+    ).length,
+    1,
   );
 });
 
@@ -130,28 +135,28 @@ test("parts story has eight complete chapters linked to matching catalog records
   }
 });
 
-test("scroll chapter selection follows the nearest chapter in either direction", () => {
-  const positions = [
-    { top: -200, height: 100 },
-    { top: 0, height: 100 },
-    { top: 200, height: 100 },
-  ];
-  assert.equal(nearestChapterIndex(positions, 20), 1);
-  assert.equal(nearestChapterIndex(positions, 280), 2);
-  assert.equal(nearestChapterIndex(positions, 20), 1);
-  assert.equal(nearestChapterIndex([], 20), 0);
-});
-
-test("parts story uses reversible native scrolling with accessible mobile and motion fallbacks", () => {
+test("parts story keeps all chapters selectable without long, sticky, or scroll-driven panels", () => {
   const html = fs.readFileSync(
     path.join(__dirname, "..", "biswokarma-workshop (1).html"),
     "utf8",
   );
-  assert.ok(html.includes('addEventListener("scroll", updateChapter, { passive: true })'));
+  const component = html.slice(
+    html.indexOf("function PartsStory"),
+    html.indexOf("function MarketplaceParts"),
+  );
+  const storyStyles = html.slice(
+    html.indexOf(".partsStory {"),
+    html.indexOf(".catalogHeading {"),
+  );
+  assert.ok(component.includes("PARTS_STORY.map"));
+  assert.ok(component.includes('"aria-pressed": index === activeChapter'));
+  assert.ok(!component.includes('addEventListener("scroll"'));
+  assert.ok(!component.includes("scrollIntoView"));
+  assert.ok(!storyStyles.includes("position: sticky"));
+  assert.ok(!storyStyles.includes("min-height: 76svh"));
+  assert.ok(component.includes("SCHEMATIC · NOT A PART IMAGE"));
+  assert.ok(component.includes("onQuote"));
   assert.ok(html.includes("prefers-reduced-motion: reduce"));
-  assert.ok(html.includes(".storyStage { position: sticky; z-index: 3; top: 0"));
-  assert.ok(html.includes('"storyDot is-active"'));
-  assert.ok(html.includes('"aria-current": index === activeChapter ? "step"'));
   assert.ok(!/setInterval\(|autoplay/i.test(html));
 });
 
