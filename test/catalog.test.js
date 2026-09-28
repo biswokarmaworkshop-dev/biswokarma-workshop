@@ -3,10 +3,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const products = require("../data/jcb-parts.json");
+const illustrationManifest = require("../data/illustrative-jcb-parts.json");
 const {
   addToCart,
   buildInquiry,
   catalogListing,
+  displayImages,
   filterProducts,
   findProductBySlug,
   inventoryListing,
@@ -83,6 +85,43 @@ test("demo catalog records do not expose invented prices, fitment, specification
   }
 });
 
+test("mapped illustrations are bundled, labeled, and never presented as verified product photos", () => {
+  const records = new Map(products.map((product) => [product.id, product]));
+  assert.match(illustrationManifest.notice, /not guaranteed exact product or OEM photos/i);
+  assert.equal(illustrationManifest.source, "User-supplied generated parts catalog sheet");
+  for (const [productId, illustration] of Object.entries(illustrationManifest.images)) {
+    assert.ok(records.has(productId), `unknown product mapping: ${productId}`);
+    assert.ok(
+      fs.existsSync(
+        path.join(
+          __dirname,
+          "..",
+          "images",
+          "illustrative-jcb-parts",
+          illustration.filename,
+        ),
+      ),
+      `missing illustration: ${illustration.filename}`,
+    );
+    const [image] = catalogListing(
+      records.get(productId),
+      illustration,
+      illustrationManifest.source,
+    ).images;
+    assert.match(image.alt, /illustrative.*not the exact product or an OEM photo/i);
+    assert.match(image.caption, /not the exact product or an OEM photo/i);
+    assert.equal(displayImages([image]).length, 1);
+    assert.equal(
+      displayImages([{ ...image, caption: "Product photo" }]).length,
+      0,
+    );
+  }
+  assert.ok(
+    Object.keys(illustrationManifest.images).length < products.length,
+    "unmatched demo records should remain without illustrations",
+  );
+});
+
 test("search supports demo names and workshop references without fabricated machine matches", () => {
   const listings = products.map(catalogListing);
   assert.deepEqual(
@@ -133,6 +172,13 @@ test("parts story has eight complete chapters linked to matching catalog records
     assert.ok(chapter.productIds.length > 0);
     assert.ok(chapter.productIds.every((id) => ids.has(id)), chapter.title);
   }
+  const imageIds = new Set(Object.keys(illustrationManifest.images));
+  for (const chapter of chapters) {
+    assert.ok(
+      chapter.productIds.some((id) => imageIds.has(id)),
+      `${chapter.title} should have a mapped illustrative stage image`,
+    );
+  }
 });
 
 test("parts story keeps all chapters selectable without long, sticky, or scroll-driven panels", () => {
@@ -154,7 +200,7 @@ test("parts story keeps all chapters selectable without long, sticky, or scroll-
   assert.ok(!component.includes("scrollIntoView"));
   assert.ok(!storyStyles.includes("position: sticky"));
   assert.ok(!storyStyles.includes("min-height: 76svh"));
-  assert.ok(component.includes("SCHEMATIC · NOT A PART IMAGE"));
+  assert.ok(component.includes("ILLUSTRATIVE REFERENCE · NOT EXACT PRODUCT OR OEM PHOTO"));
   assert.ok(component.includes("onQuote"));
   assert.ok(html.includes("prefers-reduced-motion: reduce"));
   assert.ok(!/setInterval\(|autoplay/i.test(html));

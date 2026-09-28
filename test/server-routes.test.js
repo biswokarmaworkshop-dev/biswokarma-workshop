@@ -28,6 +28,8 @@ test("serves the catalog API, product routes and catalog browser asset", async (
   assert.deepEqual(catalog.products[0].compatibleModels, []);
   assert.deepEqual(catalog.products[0].specs, {});
   assert.equal(catalog.products[0].catalogSource, "demo_catalog");
+  assert.equal(catalog.products[0].images[0].type, "illustrative_reference");
+  assert.match(catalog.products[0].images[0].caption, /not the exact product or an OEM photo/i);
 
   const product = catalog.products.find(
     (item) => item.name === "JCB 3DX Hydraulic Pump",
@@ -49,4 +51,15 @@ test("serves the catalog API, product routes and catalog browser asset", async (
   const storyScript = await storyResponse.text();
   assert.match(storyScript, /title: "Hydraulics"/);
   assert.doesNotMatch(storyScript, /nearestChapterIndex/);
+
+  const sessionResponse = await fetch(`${origin}/vendor/session.js`);
+  assert.equal(sessionResponse.status, 200);
+  assert.match(await sessionResponse.text(), /BiswokarmaSession/);
+
+  const illustrationResponse = await fetch(
+    `${origin}/images/illustrative-jcb-parts/07-bucket-teeth-set-of-5.jpg`,
+  );
+  assert.equal(illustrationResponse.status, 200);
+  assert.match(illustrationResponse.headers.get("content-type"), /image\/jpeg/);
+  assert.ok((await illustrationResponse.arrayBuffer()).byteLength > 0);
 });

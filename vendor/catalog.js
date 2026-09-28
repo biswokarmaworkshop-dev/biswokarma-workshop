@@ -56,7 +56,24 @@
     };
   }
 
-  function catalogListing(product) {
+  function catalogListing(product, illustration, illustrationSource) {
+    const images =
+      illustration &&
+      illustrationSource === "User-supplied generated parts catalog sheet" &&
+      typeof illustration.filename === "string" &&
+      /^[a-z0-9-]+\.jpg$/i.test(illustration.filename) &&
+      typeof illustration.alt === "string"
+        ? [
+            {
+              type: "illustrative_reference",
+              url: `/images/illustrative-jcb-parts/${illustration.filename}`,
+              alt: illustration.alt,
+              caption:
+                "Illustrative reference only - not the exact product or an OEM photo",
+              sourceName: illustrationSource,
+            },
+          ]
+        : [];
     return {
       ...product,
       brand: "Supplier details unverified",
@@ -69,9 +86,28 @@
       description:
         "Unverified demo catalog entry for quote requests. Confirm supplier, exact machine and serial-number fitment, specifications, price and availability with the workshop.",
       specs: {},
-      images: [],
+      images,
       catalogSource: "demo_catalog",
     };
+  }
+
+  function displayImages(images) {
+    if (!Array.isArray(images)) return [];
+    const verified = verifiedImages(images);
+    const illustrative = images.filter(
+      (image) =>
+        image &&
+        image.type === "illustrative_reference" &&
+        typeof image.url === "string" &&
+        /^\/images\/illustrative-jcb-parts\/[a-z0-9-]+\.jpg$/i.test(image.url) &&
+        typeof image.alt === "string" &&
+        /illustrative/i.test(image.alt) &&
+        /not the exact product or an OEM photo/i.test(image.alt) &&
+        image.caption ===
+          "Illustrative reference only - not the exact product or an OEM photo" &&
+        image.sourceName === "User-supplied generated parts catalog sheet",
+    );
+    return [...verified, ...illustrative];
   }
 
   function filterProducts(products, filters) {
@@ -165,6 +201,7 @@
     addToCart,
     buildInquiry,
     catalogListing,
+    displayImages,
     filterProducts,
     findProductBySlug,
     inventoryListing,
