@@ -249,6 +249,11 @@ async function api(request, response, url) {
 
   /* ---- Create payment order (supports esewa, khalti, bank) ---- */
   if (url.pathname === "/api/payments/orders" && request.method === "POST") {
+    if (!pool) {
+      return json(response, 400, {
+        error: "Database not configured. Set DATABASE_URL to store payment orders.",
+      });
+    }
     const body = await readJson(request);
     const amount = Number(body.amount);
     const vat = Number(body.vat || 0);
@@ -274,7 +279,7 @@ async function api(request, response, url) {
       const productCode = process.env.ESEWA_MERCHANT_CODE;
       const msg = `total_amount=${amt},transaction_uuid=${refId},product_code=${productCode}`;
       const signature = crypto.createHmac("sha256", process.env.ESEWA_SECRET_KEY).update(msg).digest("hex");
-      const esewaUrl = `https://esewa.com.np/pay?amt=${amt}&dc=0&pc=${productCode}&scd=${productCode}&rid=${refId}&scm=0&su=${encodeURIComponent((url.origin || "https://biswokarma-workshop-1.onrender.com") + "/api/payments/callback/esewa")}&fu=${encodeURIComponent((url.origin || "https://biswokarma-workshop-1.onrender.com") + "/api/payments/callback/esewa")}&prn=${orderId}&sig=${signature}`;
+      const esewaUrl = `https://esewa.com.np/pay?amt=${amt}&dc=0&pc=${productCode}&scd=${productCode}&rid=${refId}&scm=0&su=${encodeURIComponent((url.origin || "https://biswokarma-workshop-1.onrender.com") + "/payments/esewa/success")}&fu=${encodeURIComponent((url.origin || "https://biswokarma-workshop-1.onrender.com") + "/payments/esewa/failure")}&sig=${encodeURIComponent(signature)}`;
       return json(response, 201, { order, esewaUrl, message: "Redirect customer to eSewa for payment" });
     }
 
@@ -288,6 +293,9 @@ async function api(request, response, url) {
 
   /* ---- eSewa payment callback ---- */
   if (url.pathname === "/api/payments/callback/esewa" && request.method === "GET") {
+    if (!pool) {
+      return json(response, 400, { error: "Database not configured for payment verification." });
+    }
     const params = new URLSearchParams(url.search);
     const refId = params.get("refId") || params.get("rid") || "";
     const amt = params.get("amt") || "0";
@@ -297,13 +305,13 @@ async function api(request, response, url) {
       if (verifyResult && verifyResult.response_code === "000") {
         await pool.query(
           "UPDATE payment_orders SET status = 'success', transaction_id = $1, updated_at = NOW() WHERE order_id = $2",
-          [refId, refId]
+          [refId, refId],
         );
         return json(response, 200, { status: "success", orderId: refId, message: "Payment verified and recorded!" });
       } else {
         await pool.query(
           "UPDATE payment_orders SET status = 'failed', transaction_id = $1, updated_at = NOW() WHERE order_id = $2",
-          [refId, refId]
+          [refId, refId],
         );
         return json(response, 200, { status: "failed", orderId: refId, message: "Payment verification failed." });
       }
@@ -318,6 +326,9 @@ async function api(request, response, url) {
     /^\/api\/payments\/orders\/([^/]+)\/callback$/,
   );
   if (paymentCallback && request.method === "POST") {
+    if (!pool) {
+      return json(response, 400, { error: "Database not configured for payment webhooks." });
+    }
     const body = await readJson(request);
     if (!verifyWebhook(body, request))
       return json(response, 401, { error: "Invalid webhook signature" });
@@ -357,10 +368,10 @@ const server = http.createServer((request, response) => {
   }
   if (url.pathname === "/robots.txt") {
     const robotsContent = `User-agent: *
-Allow: /
-Disallow: /api/
+ Allow: /
+ Disallow: /api/
 
-Sitemap: https://biswokarma-workshop-1.onrender.com/sitemap.xml`;
+ Sitemap: https://biswokarma-workshop-1.onrender.com/sitemap.xml`;
     response.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
     return response.end(robotsContent);
   }
