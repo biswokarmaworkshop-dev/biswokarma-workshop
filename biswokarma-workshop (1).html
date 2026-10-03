@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Biswokarma Workshop</title>
-    <meta name="description" content="Biswokarma Workshop dashboard for parts, inventory, billing, customers and supplier management." />
+    <title>Biswokarma Workshop Dashboard</title>
+    <meta name="description" content="Biswokarma Workshop premium dashboard for parts, billing, inventory, customers, suppliers and reports." />
     <meta name="theme-color" content="#0f172a" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,59 +12,53 @@
     <style>
       :root {
         --bg: #f3f5f8;
-        --bg-2: #eef2f7;
-        --card: rgba(255,255,255,0.78);
+        --card: rgba(255,255,255,0.8);
         --card-strong: #ffffff;
         --soft: #edf2f7;
-        --line: rgba(15, 23, 42, 0.08);
-        --text: #101827;
+        --line: rgba(15,23,42,0.08);
+        --text: #0f172a;
         --muted: #667085;
         --muted-2: #7c8aa4;
-        --primary: #0f172a;
+        --primary: #101827;
         --primary-soft: #eaf0ff;
         --accent: #f59e0b;
         --accent-soft: #fff2d9;
         --green: #16a34a;
         --green-soft: #eafaf1;
         --blue: #2563eb;
-        --blue-soft: #eef5ff;
+        --blue-soft: #edf5ff;
         --red: #dc2626;
         --red-soft: #fff0f0;
-        --amber: #f59e0b;
         --purple: #7c3aed;
         --purple-soft: #f3ebff;
-        --shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+        --shadow: 0 16px 30px rgba(15,23,42,0.08);
       }
-
       html[data-theme="dark"] {
         --bg: #0b1220;
-        --bg-2: #111827;
-        --card: rgba(17, 24, 39, 0.75);
+        --card: rgba(17,24,39,0.78);
         --card-strong: #111827;
         --soft: #101b2e;
-        --line: rgba(148, 163, 184, 0.16);
+        --line: rgba(148,163,184,0.16);
         --text: #edf3ff;
         --muted: #a4b0c3;
         --muted-2: #7f8ca6;
-        --primary: #e6eefb;
-        --primary-soft: #101e34;
+        --primary: #eaf0ff;
+        --primary-soft: #102038;
         --accent: #f8ba5d;
         --accent-soft: rgba(248,186,93,0.12);
         --green: #4ade80;
-        --green-soft: rgba(74, 222, 128, 0.1);
+        --green-soft: rgba(74,222,128,0.09);
         --blue: #7ab2ff;
         --blue-soft: rgba(122,178,255,0.12);
         --red: #f87171;
         --red-soft: rgba(248,113,113,0.1);
         --purple: #c4b5fd;
         --purple-soft: rgba(196,181,253,0.12);
-        --shadow: 0 16px 32px rgba(2, 6, 23, 0.42);
+        --shadow: 0 16px 30px rgba(2,6,23,0.42);
       }
-
       * { box-sizing: border-box; }
       html, body {
         margin: 0;
-        padding: 0;
         min-height: 100vh;
         background: var(--bg);
         color: var(--text);
@@ -72,683 +66,262 @@
       }
       body {
         background:
-          radial-gradient(circle at top left, rgba(245, 158, 11, 0.12), transparent 18%),
-          radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.08), transparent 22%),
+          radial-gradient(circle at top left, rgba(245,158,11,0.12), transparent 18%),
+          radial-gradient(circle at bottom right, rgba(37,99,235,0.08), transparent 22%),
           var(--bg);
       }
-      button, input { font: inherit; }
-      a { color: inherit; text-decoration: none; }
+      button, input, select { font: inherit; }
       #root { min-height: 100vh; }
-
-      .app-shell {
-        min-height: 100vh;
-        display: grid;
-        grid-template-columns: 240px 1fr;
-      }
-
+      .app-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
       .sidebar {
         position: sticky;
         top: 0;
         height: 100vh;
+        padding: 18px 14px;
+        border-right: 1px solid var(--line);
         background: rgba(255,255,255,0.38);
         backdrop-filter: blur(12px);
-        border-right: 1px solid var(--line);
-        padding: 20px 16px;
       }
-      html[data-theme="dark"] .sidebar { background: rgba(15,23,42,0.48); }
-
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 4px 8px 20px;
-      }
+      html[data-theme="dark"] .sidebar { background: rgba(15,23,42,0.52); }
+      .brand { display: flex; align-items: center; gap: 12px; margin: 4px 8px 18px; }
       .brand-mark {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        display: grid;
-        place-items: center;
-        font-weight: 800;
-        color: #f9d37b;
-        background: linear-gradient(135deg, #111827, #2d3748);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 10px 18px rgba(15,23,42,0.12);
+        width: 38px; height: 38px; border-radius: 12px; display:grid; place-items:center;
+        background: linear-gradient(135deg, #111827, #2d3748); color:#f9d37b; font-weight:800;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 10px 20px rgba(15,23,42,0.12);
       }
-      .brand-copy strong {
-        display: block;
-        font-size: 0.98rem;
-      }
-      .brand-copy span {
-        display: block;
-        color: var(--muted);
-        font-size: 0.72rem;
-      }
-
-      .nav-block {
-        margin-top: 8px;
-      }
+      .brand-copy strong { display:block; font-size: .98rem; }
+      .brand-copy span { display:block; color: var(--muted); font-size: .72rem; }
+      .nav-block { margin-top: 8px; }
       .nav-label {
-        padding: 10px 12px 8px;
-        font-size: 0.7rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--muted-2);
-        font-weight: 700;
+        padding: 10px 12px 8px; font-size: 0.7rem; letter-spacing: .12em; text-transform: uppercase;
+        color: var(--muted-2); font-weight: 700;
       }
       .nav-item {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        border: 1px solid transparent;
-        background: transparent;
-        color: var(--text);
-        border-radius: 14px;
-        padding: 11px 12px;
-        margin: 4px 0;
-        cursor: pointer;
-        transition: 0.2s ease;
+        width: 100%; display:flex; align-items:center; justify-content:space-between; gap:12px;
+        border:1px solid transparent; background:transparent; color:var(--text); border-radius:14px;
+        padding:11px 12px; margin:4px 0; cursor:pointer; transition:0.2s ease;
       }
-      .nav-item:hover {
-        background: rgba(255,255,255,0.28);
-        border-color: var(--line);
-        transform: translateX(1px);
-      }
+      .nav-item:hover { background: rgba(255,255,255,0.25); border-color: var(--line); transform: translateX(1px); }
       .nav-item.active {
-        background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.45));
-        border-color: var(--line);
-        box-shadow: var(--shadow);
+        background: linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0.42));
+        border-color: var(--line); box-shadow: var(--shadow);
       }
       html[data-theme="dark"] .nav-item.active { background: rgba(30,41,59,0.8); }
-
-      .nav-main {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
+      .nav-main { display:flex; align-items:center; gap:10px; }
       .nav-icon {
-        width: 28px;
-        height: 28px;
-        border-radius: 9px;
-        display: grid;
-        place-items: center;
-        background: var(--soft);
-        color: var(--muted);
-        font-size: 0.8rem;
+        width: 28px; height: 28px; border-radius:9px; display:grid; place-items:center;
+        background: var(--soft); color: var(--muted); font-size:.8rem;
       }
-      .nav-item.active .nav-icon {
-        background: var(--accent-soft);
-        color: var(--accent);
-      }
+      .nav-item.active .nav-icon { background: var(--accent-soft); color: var(--accent); }
       .nav-badge {
-        min-width: 20px;
-        height: 20px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 999px;
-        background: var(--soft);
-        color: var(--muted);
-        font-size: 0.65rem;
-        padding: 0 6px;
+        min-width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center;
+        border-radius:999px; background: var(--soft); color: var(--muted); font-size:.65rem; padding: 0 6px;
       }
-
-      .content-wrap {
-        min-width: 0;
-      }
+      .content-wrap { min-width: 0; }
       .topbar {
-        height: 84px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 14px;
-        padding: 18px 22px 14px;
-        border-bottom: 1px solid var(--line);
-        background: rgba(243,245,248,0.76);
-        backdrop-filter: blur(14px);
-        position: sticky;
-        top: 0;
-        z-index: 30;
+        display:flex; align-items:center; justify-content:space-between; gap:14px; padding:18px 22px 14px;
+        border-bottom:1px solid var(--line); background: rgba(243,245,248,0.78); backdrop-filter: blur(14px);
+        position: sticky; top:0; z-index:20;
       }
       html[data-theme="dark"] .topbar { background: rgba(11,18,32,0.76); }
-
       .search-box {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-width: 320px;
-        max-width: 540px;
-        width: 100%;
-        padding: 12px 14px;
-        border: 1px solid var(--line);
-        border-radius: 15px;
-        background: var(--card);
-        box-shadow: var(--shadow);
+        display:flex; align-items:center; gap:10px; width:100%; max-width:540px; min-width:320px;
+        padding:12px 14px; border:1px solid var(--line); border-radius:15px; background: var(--card); box-shadow: var(--shadow);
       }
       .search-box input {
-        flex: 1;
-        border: none;
-        outline: none;
-        background: transparent;
-        color: var(--text);
+        flex:1; border:none; outline:none; background:transparent; color:var(--text);
       }
       .search-box input::placeholder { color: var(--muted-2); }
-
-      .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
+      .header-actions { display:flex; align-items:center; gap:12px; }
       .icon-btn {
-        width: 40px;
-        height: 40px;
-        border: 1px solid var(--line);
-        background: var(--card);
-        color: var(--text);
-        border-radius: 12px;
-        display: grid;
-        place-items: center;
-        cursor: pointer;
-        box-shadow: var(--shadow);
+        width:40px; height:40px; border:1px solid var(--line); background:var(--card); color:var(--text);
+        border-radius:12px; display:grid; place-items:center; cursor:pointer; box-shadow:var(--shadow);
       }
       .user-box {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        border: 1px solid var(--line);
-        background: var(--card);
-        border-radius: 14px;
-        padding: 8px 12px 8px 8px;
-        box-shadow: var(--shadow);
+        display:flex; align-items:center; gap:12px; border:1px solid var(--line); background:var(--card);
+        border-radius:14px; padding:8px 12px 8px 8px; box-shadow:var(--shadow);
       }
       .avatar {
-        width: 34px;
-        height: 34px;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #111827, #374151);
-        display: grid;
-        place-items: center;
-        color: white;
-        font-weight: 700;
+        width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,#111827,#374151);
+        display:grid; place-items:center; color:white; font-weight:700;
       }
-      .user-meta strong { display: block; font-size: 0.86rem; }
-      .user-meta span { display: block; color: var(--muted); font-size: 0.7rem; }
-
-      .page {
-        padding: 22px;
-      }
+      .user-meta strong { display:block; font-size:0.86rem; }
+      .user-meta span { display:block; color:var(--muted); font-size:0.7rem; }
+      .page { padding:22px; }
       .crumb {
-        color: var(--muted);
-        font-size: 0.74rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        font-weight: 700;
-        margin-bottom: 12px;
+        margin-bottom:12px; color:var(--muted); font-size:0.74rem; letter-spacing:0.08em; text-transform:uppercase; font-weight:700;
       }
-
       .hero {
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap: 18px;
-        padding: 24px 28px;
-        border-radius: 28px;
-        background: linear-gradient(135deg, #111827, #1d2435);
-        color: white;
-        box-shadow: var(--shadow);
-        position: relative;
-        overflow: hidden;
+        position: relative; display:flex; align-items:center; justify-content:space-between; gap:20px;
+        padding:24px 28px; border-radius:28px; background:linear-gradient(135deg,#111827,#1d2435); color:#fff;
+        overflow:hidden; box-shadow: var(--shadow);
       }
       .hero::after {
-        content: "";
-        position: absolute;
-        top: -60px;
-        right: -30px;
-        width: 240px;
-        height: 240px;
-        border-radius: 50%;
+        content:""; position:absolute; top:-60px; right:-30px; width:240px; height:240px; border-radius:50%;
         background: radial-gradient(circle, rgba(245,158,11,0.46), transparent 62%);
       }
-      .hero-copy { position: relative; z-index: 1; }
+      .hero-copy { position:relative; z-index:1; }
       .live-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.1);
-        color: #e9eefb;
-        font-size: 0.7rem;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
+        display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
+        background: rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); color:#edf3ff;
+        font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase;
       }
-      .live-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #34d399;
-        box-shadow: 0 0 0 7px rgba(52,211,153,0.18);
-      }
-      .hero h1 {
-        margin: 14px 0 8px;
-        font-size: clamp(2rem, 3vw, 3rem);
-        letter-spacing: -0.07em;
-      }
-      .hero p {
-        margin: 0;
-        color: rgba(255,255,255,0.78);
-      }
-      .hero-actions {
-        position: relative;
-        z-index: 1;
-        display: flex;
-        gap: 12px;
-      }
+      .live-dot { width:8px; height:8px; border-radius:50%; background:#34d399; box-shadow:0 0 0 7px rgba(52,211,153,0.18); }
+      .hero h1 { margin:14px 0 8px; font-size: clamp(2rem, 3vw, 3rem); letter-spacing:-0.07em; }
+      .hero p { margin:0; color: rgba(255,255,255,0.78); }
+      .hero-actions { position:relative; z-index:1; display:flex; gap:12px; }
       .btn {
-        border: none;
-        border-radius: 12px;
-        padding: 12px 16px;
-        cursor: pointer;
-        font-weight: 700;
-        transition: transform 0.18s ease;
+        border:none; border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer; transition: transform .18s ease;
       }
       .btn:hover { transform: translateY(-1px); }
       .btn.primary {
-        background: linear-gradient(135deg, #f7b552, #f59e0b);
-        color: #1c1d20;
-        box-shadow: 0 16px 26px rgba(245,158,11,0.28);
+        background: linear-gradient(135deg, #f7b552, #f59e0b); color:#1c1d20; box-shadow: 0 16px 26px rgba(245,158,11,0.28);
       }
       .btn.secondary {
-        background: rgba(255,255,255,0.08);
-        color: white;
-        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.14);
       }
-
       .kpis {
-        margin-top: 22px;
-        display: grid;
-        grid-template-columns: repeat(6, minmax(150px, 1fr));
-        gap: 16px;
+        margin-top: 22px; display:grid; grid-template-columns: repeat(6, minmax(150px, 1fr)); gap: 16px;
       }
       .kpi-card {
-        border: 1px solid var(--line);
-        background: var(--card);
-        border-radius: 22px;
-        padding: 16px 18px 14px;
-        box-shadow: var(--shadow);
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-        text-align: left;
-        cursor: pointer;
+        border:1px solid var(--line); border-radius:22px; padding:16px 18px 14px; box-shadow: var(--shadow);
+        display:flex; flex-direction:column; gap:14px; text-align:left; cursor:pointer;
       }
-      .kpi-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-      }
-      .kpi-label {
-        color: var(--muted);
-        font-size: 0.7rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
+      .kpi-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+      .kpi-label { color: var(--muted); font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase; }
       .kpi-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 12px;
-        display: grid;
-        place-items: center;
-        font-weight: 700;
+        width:36px; height:36px; border-radius:12px; display:grid; place-items:center; font-weight:700;
       }
-      .kpi-value {
-        font-size: clamp(1.5rem, 1.5vw, 2rem);
-        letter-spacing: -0.06em;
-        font-weight: 800;
-      }
-      .kpi-meta {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-      }
-      .delta {
-        display:inline-flex;
-        padding: 6px 8px;
-        border-radius: 999px;
-        font-size: 0.7rem;
-        font-weight: 700;
-      }
+      .kpi-value { font-size: clamp(1.5rem, 1.5vw, 2rem); letter-spacing:-0.06em; font-weight:800; }
+      .kpi-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+      .delta { display:inline-flex; padding:6px 8px; border-radius:999px; font-size:0.7rem; font-weight:700; }
       .delta.up { background: var(--green-soft); color: var(--green); }
       .delta.down { background: var(--red-soft); color: var(--red); }
-      .kpi-sub { color: var(--muted); font-size: 0.72rem; }
-
-      .double-grid {
-        margin-top: 20px;
-        display: grid;
-        grid-template-columns: 1.6fr 1fr;
-        gap: 18px;
-      }
+      .kpi-sub { color: var(--muted); font-size:0.72rem; }
+      .double-grid { margin-top:22px; display:grid; grid-template-columns:1.6fr 1fr; gap:18px; }
       .panel {
-        border-radius: 26px;
-        background: var(--card);
-        border: 1px solid var(--line);
-        box-shadow: var(--shadow);
-        overflow: hidden;
+        border-radius: 26px; background: var(--card); border:1px solid var(--line); box-shadow: var(--shadow); overflow:hidden;
       }
-      .panel-head {
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        padding: 18px 20px 16px;
-        border-bottom: 1px solid var(--line);
-      }
-      .panel-head h3 {
-        margin: 0;
-        font-size: 1.08rem;
-        letter-spacing: -0.04em;
-      }
-      .panel-head small { color: var(--muted); }
-      .panel-body { padding: 18px 20px 20px; }
-
-      .segmented {
-        display: inline-flex;
-        gap: 6px;
-        background: var(--soft);
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 5px;
-      }
+      .panel-head { display:flex; align-items:center; justify-content:space-between; padding:18px 20px 16px; border-bottom:1px solid var(--line); }
+      .panel-head h3 { margin:0; font-size:1.08rem; letter-spacing:-0.04em; }
+      .panel-head small { color:var(--muted); }
+      .panel-body { padding:18px 20px 20px; }
+      .segmented { display:inline-flex; gap:6px; background:var(--soft); border:1px solid var(--line); border-radius:12px; padding:5px; }
       .segmented button {
-        border: none;
-        background: transparent;
-        color: var(--muted);
-        padding: 7px 10px;
-        border-radius: 9px;
-        cursor: pointer;
-        font-weight: 700;
+        border:none; background:transparent; color:var(--muted); padding:7px 10px; border-radius:9px; cursor:pointer; font-weight:700;
       }
-      .segmented button.active {
-        background: white;
-        color: var(--text);
-        box-shadow: 0 8px 16px rgba(15,23,42,0.08);
-      }
+      .segmented button.active { background:#fff; color:var(--text); box-shadow:0 8px 16px rgba(15,23,42,0.08); }
       html[data-theme="dark"] .segmented button.active { background: rgba(15,23,42,0.8); }
-
-      .chart-box {
-        height: 220px;
-        display: flex;
-        align-items: flex-end;
-        gap: 10px;
-        margin-top: 12px;
-      }
-      .bar-group {
-        flex: 1;
-        height: 100%;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        gap: 6px;
-      }
-      .bar {
-        position: relative;
-        width: 18px;
-        border-radius: 12px 12px 0 0;
-        min-height: 12px;
-      }
+      .chart-box { height:220px; display:flex; align-items:flex-end; gap:10px; margin-top:12px; }
+      .bar-group { flex:1; height:100%; display:flex; align-items:flex-end; justify-content:center; gap:6px; }
+      .bar { position:relative; width:18px; border-radius:12px 12px 0 0; min-height:12px; }
       .bar.sales { background: linear-gradient(180deg, #f7c863, #f29f2f); }
       .bar.profit { background: linear-gradient(180deg, #8fe0ad, #3bb877); }
       .bar.orders { background: linear-gradient(180deg, #9cc0ff, #5d8af0); }
-      .bar-label {
-        position: absolute;
-        left: 50%;
-        bottom: -20px;
-        transform: translateX(-50%);
-        font-size: 0.64rem;
-        color: var(--muted);
-      }
-      .legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 14px;
-        margin-top: 24px;
-        color: var(--muted);
-        font-size: 0.75rem;
-      }
-      .legend b {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        margin-right: 6px;
-        vertical-align: middle;
-      }
-
-      .alert-list {
-        display: grid;
-        gap: 12px;
-      }
-      .alert-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        background: var(--soft);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 12px 12px;
-      }
-      .alert-left {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .alert-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-      }
-      .alert-text strong {
-        display: block;
-        font-size: 0.84rem;
-      }
-      .alert-text span {
-        display: block;
-        color: var(--muted);
-        font-size: 0.72rem;
-      }
-      .tiny-pill {
-        display: inline-flex;
-        padding: 6px 8px;
-        font-size: 0.68rem;
-        border-radius: 999px;
-        background: rgba(148,163,184,0.1);
-        color: var(--muted);
-        font-weight: 700;
-      }
-
-      .mid-grid {
-        margin-top: 20px;
-        display: grid;
-        grid-template-columns: 1.35fr 1fr;
-        gap: 18px;
-      }
-      .grid-cards {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0,1fr));
-        gap: 14px;
-      }
-      .product-card {
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: 22px;
-        background: var(--card-strong);
-        box-shadow: var(--shadow);
-      }
-      .product-image {
-        height: 150px;
-        border-radius: 18px;
-        position: relative;
-        overflow: hidden;
-        background: linear-gradient(135deg, #e5e7eb, #f9fafb);
-        border: 1px solid rgba(17,24,39,0.03);
-      }
+      .bar-label { position:absolute; left:50%; bottom:-20px; transform:translateX(-50%); font-size:0.64rem; color:var(--muted); }
+      .legend { display:flex; flex-wrap:wrap; gap:14px; margin-top:24px; color:var(--muted); font-size:0.75rem; }
+      .legend b { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+      .alert-list, .insight-list, .quick-actions { display:grid; gap:12px; }
+      .alert-item, .insight-item { display:flex; align-items:center; justify-content:space-between; gap:12px; background: var(--soft); border:1px solid var(--line); border-radius:14px; padding:12px; }
+      .alert-left { display:flex; align-items:center; gap:10px; }
+      .alert-dot { width:10px; height:10px; border-radius:50%; }
+      .alert-text strong { display:block; font-size:0.84rem; }
+      .alert-text span { display:block; color:var(--muted); font-size:0.72rem; }
+      .tiny-pill { display:inline-flex; padding:6px 8px; border-radius:999px; background: rgba(148,163,184,0.1); color:var(--muted); font-weight:700; font-size:0.68rem; }
+      .mid-grid { margin-top:22px; display:grid; grid-template-columns:1.35fr 1fr; gap:18px; }
+      .grid-cards { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:14px; }
+      .product-card { padding:12px; border:1px solid var(--line); border-radius:22px; background: var(--card-strong); box-shadow: var(--shadow); }
+      .product-image { height:150px; border-radius:18px; position:relative; overflow:hidden; background:linear-gradient(135deg, #e5e7eb, #f9fafb); border:1px solid rgba(17,24,39,0.03); }
       html[data-theme="dark"] .product-image { background: linear-gradient(135deg, #1f2937, #0f172a); }
       .product-image::before {
-        content: "";
-        position: absolute;
-        inset: 16px 22px 14px 22px;
-        border-radius: 20px;
+        content:""; position:absolute; inset:16px 22px 14px 22px; border-radius:20px;
         background: linear-gradient(135deg, rgba(16,163,127,0.14), rgba(59,130,246,0.12));
         transform: perspective(500px) rotateX(18deg) rotateY(-10deg);
       }
-      .product-card .tag {
-        margin-top: 12px;
-        display:inline-flex;
-        padding: 6px 8px;
-        border-radius: 999px;
-        background: var(--accent-soft);
-        color: var(--accent);
-        font-weight: 700;
-        font-size: 0.68rem;
-      }
-      .product-card h4 {
-        margin: 12px 0 6px;
-        font-size: 1rem;
-        letter-spacing: -0.04em;
-      }
-      .product-meta {
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        color: var(--muted);
-        font-size: 0.72rem;
-      }
-      .product-bottom {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: 14px;
-        gap: 12px;
-      }
-      .price {
-        font-size: 1.2rem;
-        font-weight: 800;
-        letter-spacing: -0.06em;
-      }
+      .product-card .tag { margin-top:12px; display:inline-flex; padding:6px 8px; border-radius:999px; background: var(--accent-soft); color: var(--accent); font-weight:700; font-size:0.68rem; }
+      .product-card h4 { margin:12px 0 6px; font-size:1rem; letter-spacing:-0.04em; }
+      .product-meta { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:0.72rem; }
+      .product-bottom { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; }
+      .price { font-size:1.2rem; font-weight:800; letter-spacing:-0.06em; }
       .btn-small {
-        border: none;
-        background: var(--soft);
-        color: var(--text);
-        border-radius: 10px;
-        padding: 9px 12px;
-        font-weight: 700;
-        cursor: pointer;
+        border:none; background:var(--soft); color:var(--text); border-radius:10px; padding:9px 12px; font-weight:700; cursor:pointer;
       }
-
-      .insight-list {
-        display: grid;
-        gap: 12px;
-      }
-      .insight-item {
-        display:flex;
-        align-items:flex-start;
-        gap: 12px;
-        border:1px solid var(--line);
-        background: var(--soft);
-        border-radius: 14px;
-        padding: 12px;
-      }
+      .insight-item { align-items:flex-start; }
       .insight-icon {
-        width: 30px;
-        height: 30px;
-        border-radius: 10px;
-        display:grid;
-        place-items:center;
-        background: var(--accent-soft);
-        color: var(--accent);
-        font-weight: 800;
+        width:30px; height:30px; border-radius:10px; display:grid; place-items:center; background:var(--accent-soft); color:var(--accent);
+        font-weight:800;
       }
-      .insight-text strong { display:block; margin-bottom: 4px; font-size: 0.84rem; }
-      .insight-text span { color: var(--muted); font-size: 0.72rem; }
-
-      .bottom-grid {
-        margin-top: 20px;
-        display: grid;
-        grid-template-columns: 1.3fr 1fr;
-        gap: 18px;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-      th, td {
-        text-align: left;
-        padding: 13px 12px;
-        border-bottom: 1px solid var(--line);
-      }
-      th {
-        color: var(--muted);
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        font-size: 0.66rem;
-      }
-      td { font-size: 0.82rem; }
-      .status-tag {
-        display: inline-flex;
-        padding: 6px 8px;
-        border-radius: 999px;
-        font-size: 0.68rem;
-        font-weight: 700;
-      }
+      .insight-text strong { display:block; margin-bottom:4px; font-size:0.84rem; }
+      .insight-text span { color:var(--muted); font-size:0.72rem; }
+      .bottom-grid { margin-top:22px; display:grid; grid-template-columns:1.3fr 1fr; gap:18px; }
+      table { width:100%; border-collapse:collapse; }
+      th, td { text-align:left; padding:13px 12px; border-bottom:1px solid var(--line); }
+      th { color:var(--muted); font-size:0.66rem; letter-spacing:0.1em; text-transform:uppercase; }
+      td { font-size:0.82rem; }
+      .status-tag { display:inline-flex; padding:6px 8px; border-radius:999px; font-size:0.68rem; font-weight:700; }
       .status-tag.success { background: var(--green-soft); color: var(--green); }
       .status-tag.warn { background: var(--red-soft); color: var(--red); }
       .status-tag.info { background: var(--blue-soft); color: var(--blue); }
       .status-tag.neutral { background: var(--soft); color: var(--muted); }
-
-      .quick-actions {
-        display: grid;
-        gap: 8px;
-      }
       .quick-btn {
-        text-align: left;
-        width: 100%;
-        padding: 13px 14px;
-        border: 1px solid var(--line);
-        background: var(--soft);
-        color: var(--text);
-        border-radius: 12px;
-        cursor: pointer;
-        font-weight: 700;
+        text-align:left; width:100%; padding:13px 14px; border:1px solid var(--line); background:var(--soft); color:var(--text);
+        border-radius:12px; font-weight:700; cursor:pointer;
       }
-
-      @media (max-width: 1100px) {
+      .modal-backdrop {
+        position: fixed; inset:0; background: rgba(15,23,42,0.52); display:grid; place-items:center; z-index:50; padding:20px;
+      }
+      .modal {
+        width: min(520px, 100%); background: var(--card-strong); border:1px solid var(--line); border-radius:24px; box-shadow: var(--shadow);
+        overflow:hidden;
+      }
+      .modal-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:18px 20px; border-bottom:1px solid var(--line); }
+      .modal-head h3 { margin:0; font-size:1.1rem; }
+      .close-btn { border:none; background: var(--soft); color: var(--text); width:32px; height:32px; border-radius:10px; cursor:pointer; }
+      .modal-body { padding:20px; display:grid; gap:14px; }
+      .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+      .field { display:grid; gap:8px; }
+      .field label { font-size:0.72rem; color:var(--muted); font-weight:700; letter-spacing:0.04em; }
+      .field input, .field select {
+        width:100%; border:1px solid var(--line); background: var(--soft); color:var(--text); border-radius:12px; padding:10px 12px; outline:none;
+      }
+      .modal-actions { display:flex; justify-content:flex-end; gap:10px; padding-top:8px; }
+      @media (max-width: 1080px) {
         .app-shell { grid-template-columns: 1fr; }
-        .sidebar { display: none; }
+        .sidebar { display:none; }
         .kpis { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
-        .double-grid, .mid-grid, .bottom-grid { grid-template-columns: 1fr; }
+        .double-grid, .mid-grid, .bottom-grid { grid-template-columns:1fr; }
       }
       @media (max-width: 620px) {
-        .topbar { padding: 14px 16px; }
-        .search-box { min-width: 0; }
-        .page { padding: 16px; }
-        .hero { flex-direction: column; align-items: flex-start; }
-        .hero-actions { width: 100%; }
-        .hero-actions .btn { flex: 1; }
+        .topbar { padding:14px 16px; }
+        .search-box { min-width:0; }
+        .page { padding:16px; }
+        .hero { flex-direction:column; align-items:flex-start; }
+        .hero-actions { width:100%; }
+        .hero-actions .btn { flex:1; }
         .kpis { grid-template-columns: repeat(2, minmax(120px,1fr)); }
         .grid-cards { grid-template-columns: 1fr; }
+        .field-grid { grid-template-columns:1fr; }
       }
     </style>
   </head>
   <body>
     <div id="root"></div>
-
     <script src="/vendor/react.production.min.js"></script>
     <script src="/vendor/react-dom.production.min.js"></script>
     <script>
-      const { useState, useEffect, useMemo } = React;
+      const { useState, useMemo, useEffect } = React;
+      const dashboardMenu = [
+        { key: 'overview', label: 'Dashboard', icon: '⌂' },
+        { key: 'products', label: 'Products', icon: '◫' },
+        { key: 'inventory', label: 'Inventory', icon: '▤' },
+        { key: 'orders', label: 'Orders', icon: '◭' },
+        { key: 'inquiries', label: 'Inquiries', icon: '✦' },
+        { key: 'customers', label: 'Customers', icon: '◎' },
+        { key: 'suppliers', label: 'Suppliers', icon: '◍' },
+        { key: 'billing', label: 'Billing', icon: '▣' },
+        { key: 'reports', label: 'Reports', icon: '▨' },
+        { key: 'settings', label: 'Settings', icon: '⚙' }
+      ];
 
       function loadShared(key, fallback) {
         try {
@@ -766,65 +339,45 @@
       }
 
       function money(value) {
-        const num = Number(value || 0);
-        return "Rs " + num.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const n = Number(value || 0);
+        return 'Rs ' + n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
       }
 
       function asNumber(value) {
-        const parsed = Number(String(value ?? 0).replace(/[^0-9.\-]/g, ""));
+        const parsed = Number(String(value ?? 0).replace(/[^0-9.\-]/g, ''));
         return Number.isFinite(parsed) ? parsed : 0;
       }
 
-      const dashboardMenu = [
-        { key: "overview", label: "Dashboard", icon: "⌂" },
-        { key: "products", label: "Products", icon: "◫" },
-        { key: "inventory", label: "Inventory", icon: "▤" },
-        { key: "orders", label: "Orders", icon: "◭" },
-        { key: "inquiries", label: "Inquiries", icon: "✦" },
-        { key: "customers", label: "Customers", icon: "◎" },
-        { key: "suppliers", label: "Suppliers", icon: "◍" },
-        { key: "billing", label: "Billing", icon: "▣" },
-        { key: "reports", label: "Reports", icon: "▨" },
-        { key: "settings", label: "Settings", icon: "⚙" }
-      ];
-
       function KpiCard({ title, value, delta, tone, icon, subtitle }) {
         const palette = {
-          primary: { bg: "var(--soft)", iconBg: "var(--primary-soft)", text: "var(--text)" },
-          green: { bg: "var(--green-soft)", iconBg: "var(--green-soft)", text: "var(--green)" },
-          blue: { bg: "var(--blue-soft)", iconBg: "var(--blue-soft)", text: "var(--blue)" },
-          amber: { bg: "var(--accent-soft)", iconBg: "var(--accent-soft)", text: "var(--accent)" },
-          red: { bg: "var(--red-soft)", iconBg: "var(--red-soft)", text: "var(--red)" },
-          purple: { bg: "var(--purple-soft)", iconBg: "var(--purple-soft)", text: "var(--purple)" }
+          primary: { bg: 'var(--soft)', iconBg: 'var(--primary-soft)', text: 'var(--text)' },
+          green: { bg: 'var(--green-soft)', iconBg: 'var(--green-soft)', text: 'var(--green)' },
+          blue: { bg: 'var(--blue-soft)', iconBg: 'var(--blue-soft)', text: 'var(--blue)' },
+          amber: { bg: 'var(--accent-soft)', iconBg: 'var(--accent-soft)', text: 'var(--accent)' },
+          red: { bg: 'var(--red-soft)', iconBg: 'var(--red-soft)', text: 'var(--red)' },
+          purple: { bg: 'var(--purple-soft)', iconBg: 'var(--purple-soft)', text: 'var(--purple)' }
         };
         const style = palette[tone] || palette.primary;
         return React.createElement(
-          "button",
-          { className: "kpi-card", style: { background: style.bg } },
-          React.createElement(
-            "div",
-            { className: "kpi-head" },
-            React.createElement("span", { className: "kpi-label" }, title),
-            React.createElement("span", { className: "kpi-icon", style: { background: style.iconBg, color: style.text } }, icon)
-          ),
-          React.createElement("div", { className: "kpi-value", style: { color: style.text } }, value),
-          React.createElement(
-            "div",
-            { className: "kpi-meta" },
-            React.createElement("span", { className: `delta ${delta >= 0 ? 'up' : 'down'}` }, `${delta >= 0 ? '+' : ''}${delta}%`),
-            React.createElement("span", { className: "kpi-sub" }, subtitle)
-          )
+          'button',
+          { className: 'kpi-card', style: { background: style.bg } },
+          React.createElement('div', { className: 'kpi-head' }, React.createElement('span', { className: 'kpi-label' }, title), React.createElement('span', { className: 'kpi-icon', style: { background: style.iconBg, color: style.text } }, icon)),
+          React.createElement('div', { className: 'kpi-value', style: { color: style.text } }, value),
+          React.createElement('div', { className: 'kpi-meta' }, React.createElement('span', { className: `delta ${delta >= 0 ? 'up' : 'down'}` }, `${delta >= 0 ? '+' : ''}${delta}%`), React.createElement('span', { className: 'kpi-sub' }, subtitle))
         );
       }
 
       function StatusTag({ kind, children }) {
-        return React.createElement("span", { className: `status-tag ${kind}` }, children);
+        return React.createElement('span', { className: `status-tag ${kind}` }, children);
       }
 
       function PremiumApp() {
         const [theme, setTheme] = useState(() => loadShared('bw_theme', 'light'));
         const [menu, setMenu] = useState('overview');
         const [search, setSearch] = useState('');
+        const [modal, setModal] = useState(null);
+        const [draftProduct, setDraftProduct] = useState({ name: '', brand: '', model: '', sku: '', price: '', stock: '', category: 'Hydraulics' });
+        const [draftInvoice, setDraftInvoice] = useState({ invoiceNo: '', customer: '', total: '', method: 'Cash' });
 
         const [parts, setParts] = useState(() => loadShared('bw_parts', [
           { id: 'p1', name: 'Hydraulic Pump', brand: 'Bosch', model: 'HP-240', sku: 'HP-240', price: 14500, stock: 12, category: 'Hydraulics' },
@@ -834,54 +387,42 @@
           { id: 'p5', name: 'Alternator Belt', brand: 'Gates', model: 'AB-52', sku: 'AB-52', price: 2100, stock: 6, category: 'Drive' },
           { id: 'p6', name: 'Starter Motor', brand: 'Valeo', model: 'SM-86', sku: 'SM-86', price: 9800, stock: 2, category: 'Electrical' }
         ]));
-
         const [customers, setCustomers] = useState(() => loadShared('bw_customers', [
           { id: 'c1', name: 'Ramesh Yadav', phone: '9800001234', orders: 8, spend: 160000 },
           { id: 'c2', name: 'Metro Machinery', phone: '9822001100', orders: 12, spend: 280000 },
           { id: 'c3', name: 'Aashish Transport', phone: '9866004411', orders: 6, spend: 98000 },
           { id: 'c4', name: 'Green Valley Tools', phone: '9811007755', orders: 5, spend: 76000 }
         ]));
-
         const [suppliers, setSuppliers] = useState(() => loadShared('bw_suppliers', [
           { id: 's1', name: 'Nabil Auto Parts', category: 'Hydraulics', contact: '9843123456', outstanding: 85000 },
           { id: 's2', name: 'Spare Hub Nepal', category: 'Brakes', contact: '9856001010', outstanding: 42000 },
           { id: 's3', name: 'Prime Engineering', category: 'Electrical', contact: '9841067854', outstanding: 61000 },
           { id: 's4', name: 'KTM Trading', category: 'Filters', contact: '9801123344', outstanding: 26000 }
         ]));
-
         const [inquiries, setInquiries] = useState(() => loadShared('bw_inquiries', [
           { id: 'i1', name: 'Mohan Construction', status: 'Awaiting quote', detail: 'Backhoe hydraulic issue' },
           { id: 'i2', name: 'Sundar Service', status: 'In discussion', detail: 'Radiator repair' },
           { id: 'i3', name: 'Nabin Motors', status: 'New', detail: 'Part replacement enquiry' }
         ]));
-
         const [bills, setBills] = useState(() => loadShared('bw_bills', [
           { id: 'b1', invoiceNo: 'INV-1042', customer: { name: 'Metro Machinery' }, total: 186500, date: '2026-10-01', method: 'Bank Transfer', status: 'Paid' },
           { id: 'b2', invoiceNo: 'INV-1047', customer: { name: 'Aashish Transport' }, total: 98500, date: '2026-10-02', method: 'Cash', status: 'Pending' },
           { id: 'b3', invoiceNo: 'INV-1052', customer: { name: 'Ramesh Yadav' }, total: 214000, date: '2026-10-03', method: 'QR', status: 'Paid' }
         ]));
-
         const [purchases, setPurchases] = useState(() => loadShared('bw_purchases', [
-          { id: 'purch1', supplier: 'Nabil Auto Parts', total: 125000, amount: 125000 },
-          { id: 'purch2', supplier: 'Prime Engineering', total: 93000, amount: 93000 },
-          { id: 'purch3', supplier: 'Spare Hub Nepal', total: 71000, amount: 71000 }
+          { id: 'p1', supplier: 'Nabil Auto Parts', total: 125000, amount: 125000 },
+          { id: 'p2', supplier: 'Prime Engineering', total: 93000, amount: 93000 },
+          { id: 'p3', supplier: 'Spare Hub Nepal', total: 71000, amount: 71000 }
         ]));
 
+        useEffect(() => { document.documentElement.setAttribute('data-theme', theme); saveShared('bw_theme', theme); }, [theme]);
         useEffect(() => {
-          document.documentElement.setAttribute('data-theme', theme);
-          saveShared('bw_theme', theme);
-        }, [theme]);
-
-        useEffect(() => {
-          const data = {
-            bw_parts: parts,
-            bw_customers: customers,
-            bw_suppliers: suppliers,
-            bw_inquiries: inquiries,
-            bw_bills: bills,
-            bw_purchases: purchases
-          };
-          Object.entries(data).forEach(([key, value]) => saveShared(key, value));
+          saveShared('bw_parts', parts);
+          saveShared('bw_customers', customers);
+          saveShared('bw_suppliers', suppliers);
+          saveShared('bw_inquiries', inquiries);
+          saveShared('bw_bills', bills);
+          saveShared('bw_purchases', purchases);
         }, [parts, customers, suppliers, inquiries, bills, purchases]);
 
         const totalRevenue = useMemo(() => bills.reduce((sum, bill) => sum + asNumber(bill.total), 0), [bills]);
@@ -889,39 +430,26 @@
           const purchaseSpend = purchases.reduce((sum, item) => sum + asNumber(item.total || item.amount), 0);
           return totalRevenue - purchaseSpend;
         }, [purchases, totalRevenue]);
-        const inventoryValue = useMemo(() => parts.reduce((sum, p) => sum + asNumber(p.price) * Math.max(1, asNumber(p.stock)), 0), [parts]);
-        const lowStock = useMemo(() => parts.filter((p) => asNumber(p.stock) <= 5), [parts]);
+        const inventoryValue = useMemo(() => parts.reduce((sum, item) => sum + asNumber(item.price) * Math.max(1, asNumber(item.stock)), 0), [parts]);
+        const lowStock = useMemo(() => parts.filter((item) => asNumber(item.stock) <= 5), [parts]);
         const orderCount = bills.length;
         const customerCount = customers.length;
 
-        const chartData = useMemo(() => [
+        const chartData = [
           { label: 'Jan', sales: 120000, profit: 30000, orders: 18 },
           { label: 'Feb', sales: 155000, profit: 39000, orders: 22 },
           { label: 'Mar', sales: 176000, profit: 46000, orders: 25 },
           { label: 'Apr', sales: 198000, profit: 51000, orders: 28 },
           { label: 'May', sales: 235000, profit: 64000, orders: 31 },
           { label: 'Jun', sales: 286500, profit: 76000, orders: 34 }
-        ], []);
+        ];
 
-        const topProducts = useMemo(() => {
-          const result = [...parts].sort((a, b) => asNumber(b.price) - asNumber(a.price)).slice(0, 4);
-          return result.map((item) => ({
-            ...item,
-            sold: Math.max(11, Math.round(asNumber(item.stock) * 1.3))
-          }));
-        }, [parts]);
-
+        const topProducts = useMemo(() => [...parts].sort((a, b) => asNumber(b.price) - asNumber(a.price)).slice(0, 4).map((item) => ({ ...item, sold: Math.max(11, Math.round(asNumber(item.stock) * 1.3)) })), [parts]);
         const recentUpdates = useMemo(() => {
           const feed = [];
-          customers.slice(0, 2).forEach((customer, idx) => {
-            feed.push({ title: customer.name, detail: `Active order count: ${customer.orders}`, time: `${idx + 1}h ago` });
-          });
-          inquiries.slice(0, 2).forEach((item, idx) => {
-            feed.push({ title: item.name, detail: item.status, time: `${idx + 2}h ago` });
-          });
-          purchases.slice(0, 2).forEach((item, idx) => {
-            feed.push({ title: item.supplier, detail: money(item.total), time: `${idx + 3}h ago` });
-          });
+          customers.slice(0, 2).forEach((customer, idx) => feed.push({ title: customer.name, detail: `Active order count: ${customer.orders}`, time: `${idx + 1}h ago` }));
+          inquiries.slice(0, 2).forEach((item, idx) => feed.push({ title: item.name, detail: item.status, time: `${idx + 2}h ago` }));
+          purchases.slice(0, 2).forEach((item, idx) => feed.push({ title: item.supplier, detail: money(item.total), time: `${idx + 3}h ago` }));
           return feed.slice(0, 5);
         }, [customers, inquiries, purchases]);
 
@@ -931,29 +459,57 @@
           return parts.filter((item) => [item.name, item.brand, item.model, item.category].join(' ').toLowerCase().includes(q)).slice(0, 4);
         }, [parts, search, topProducts]);
 
+        const createProduct = () => {
+          if (!draftProduct.name || !draftProduct.brand || !draftProduct.sku) return;
+          const product = {
+            id: `p${Date.now()}`,
+            name: draftProduct.name,
+            brand: draftProduct.brand,
+            model: draftProduct.model || 'General',
+            sku: draftProduct.sku,
+            price: Number(draftProduct.price || 0),
+            stock: Number(draftProduct.stock || 0),
+            category: draftProduct.category
+          };
+          setParts((prev) => [product, ...prev]);
+          setModal(null);
+          setDraftProduct({ name: '', brand: '', model: '', sku: '', price: '', stock: '', category: 'Hydraulics' });
+        };
+
+        const createInvoice = () => {
+          const customerName = draftInvoice.customer || 'Walk-in customer';
+          const total = Number(draftInvoice.total || 0);
+          const invoiceNo = draftInvoice.invoiceNo || `INV-${Math.floor(Date.now() / 1000)}`;
+          const bill = {
+            id: `b${Date.now()}`,
+            invoiceNo,
+            customer: { name: customerName },
+            total,
+            date: new Date().toISOString().slice(0, 10),
+            method: draftInvoice.method,
+            status: 'Paid'
+          };
+          setBills((prev) => [bill, ...prev]);
+          setModal(null);
+          setDraftInvoice({ invoiceNo: '', customer: '', total: '', method: 'Cash' });
+          setMenu('billing');
+        };
+
         const renderOverview = () => React.createElement(
           React.Fragment,
           null,
-          React.createElement(
-            'section',
-            { className: 'hero' },
-            React.createElement(
-              'div',
-              { className: 'hero-copy' },
+          React.createElement('section', { className: 'hero' },
+            React.createElement('div', { className: 'hero-copy' },
               React.createElement('div', { className: 'live-badge' }, React.createElement('span', { className: 'live-dot' }), 'Live operations'),
               React.createElement('h1', null, 'Good Evening, Kunal 👋'),
-              React.createElement('p', null, 'Your workshop is moving smoothly, with a strong sales trend and healthy inventory coverage.')
+              React.createElement('p', null, 'Your workshop is moving smoothly, with strong sales momentum and healthy stock coverage.')
             ),
-            React.createElement(
-              'div',
-              { className: 'hero-actions' },
-              React.createElement('button', { className: 'btn primary' }, '+ Add Product'),
-              React.createElement('button', { className: 'btn secondary' }, 'Create Invoice')
+            React.createElement('div', { className: 'hero-actions' },
+              React.createElement('button', { className: 'btn primary', onClick: () => setModal('product') }, '+ Add Product'),
+              React.createElement('button', { className: 'btn secondary', onClick: () => setModal('invoice') }, 'Create Invoice')
             )
           ),
-          React.createElement(
-            'section',
-            { className: 'kpis' },
+          React.createElement('section', { className: 'kpis' },
             React.createElement(KpiCard, { title: 'Total Revenue', value: money(totalRevenue), delta: 18.4, tone: 'amber', icon: '↗', subtitle: 'vs last month' }),
             React.createElement(KpiCard, { title: 'Net Profit', value: money(totalProfit), delta: 12.1, tone: 'green', icon: '◌', subtitle: 'healthy margins' }),
             React.createElement(KpiCard, { title: 'Orders', value: String(orderCount), delta: 8.2, tone: 'blue', icon: '◫', subtitle: 'this period' }),
@@ -961,66 +517,33 @@
             React.createElement(KpiCard, { title: 'Customers', value: String(customerCount), delta: 7.8, tone: 'primary', icon: '◎', subtitle: 'active buyers' }),
             React.createElement(KpiCard, { title: 'Low Stock', value: String(lowStock.length), delta: lowStock.length ? -2.6 : 0, tone: lowStock.length ? 'red' : 'green', icon: '⚑', subtitle: lowStock.length ? 'needs reorder' : 'all clear' })
           ),
-          React.createElement(
-            'section',
-            { className: 'double-grid' },
-            React.createElement(
-              'div',
-              { className: 'panel' },
-              React.createElement(
-                'div',
-                { className: 'panel-head' },
+          React.createElement('section', { className: 'double-grid' },
+            React.createElement('div', { className: 'panel' },
+              React.createElement('div', { className: 'panel-head' },
                 React.createElement('div', null, React.createElement('h3', null, 'Revenue analytics')),
-                React.createElement(
-                  'div',
-                  { className: 'segmented' },
-                  ['7D', '30D', '90D', '1Y'].map((label, idx) => React.createElement('button', { key: label, className: idx === 1 ? 'active' : '' }, label))
-                )
+                React.createElement('div', { className: 'segmented' }, ['7D', '30D', '90D', '1Y'].map((label, idx) => React.createElement('button', { key: label, className: idx === 1 ? 'active' : '' }, label)))
               ),
-              React.createElement(
-                'div',
-                { className: 'panel-body' },
-                React.createElement(
-                  'div',
-                  { className: 'chart-box' },
-                  chartData.map((point) => React.createElement(
-                    'div',
-                    { className: 'bar-group', key: point.label },
+              React.createElement('div', { className: 'panel-body' },
+                React.createElement('div', { className: 'chart-box' },
+                  chartData.map((point) => React.createElement('div', { className: 'bar-group', key: point.label },
                     React.createElement('div', { className: 'bar sales', style: { height: `${(point.sales / 320000) * 100}%` } }, React.createElement('span', { className: 'bar-label' }, point.label)),
                     React.createElement('div', { className: 'bar profit', style: { height: `${(point.profit / 80000) * 100}%` } }, null),
                     React.createElement('div', { className: 'bar orders', style: { height: `${(point.orders / 34) * 100}%` } }, null)
                   ))
                 ),
-                React.createElement(
-                  'div',
-                  { className: 'legend' },
+                React.createElement('div', { className: 'legend' },
                   React.createElement('span', null, React.createElement('b', { style: { background: '#f7c863' } }), 'Revenue'),
                   React.createElement('span', null, React.createElement('b', { style: { background: '#8fe0ad' } }), 'Profit'),
                   React.createElement('span', null, React.createElement('b', { style: { background: '#9cc0ff' } }), 'Orders')
                 )
               )
             ),
-            React.createElement(
-              'div',
-              { className: 'panel' },
-              React.createElement(
-                'div',
-                { className: 'panel-head' },
-                React.createElement('div', null, React.createElement('h3', null, 'Inventory alerts')),
-                React.createElement('button', { className: 'btn-small' }, 'View all')
-              ),
-              React.createElement(
-                'div',
-                { className: 'panel-body' },
-                React.createElement(
-                  'div',
-                  { className: 'alert-list' },
-                  (lowStock.length ? lowStock : [{ name: 'Brake Pad Set', stock: 2 }, { name: 'Starter Motor', stock: 1 }, { name: 'Radiator Hose', stock: 3 }]).slice(0, 4).map((item, index) => React.createElement(
-                    'div',
-                    { className: 'alert-item', key: item.name || index },
-                    React.createElement(
-                      'div',
-                      { className: 'alert-left' },
+            React.createElement('div', { className: 'panel' },
+              React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Inventory alerts')), React.createElement('button', { className: 'btn-small', onClick: () => setMenu('inventory') }, 'View all')),
+              React.createElement('div', { className: 'panel-body' },
+                React.createElement('div', { className: 'alert-list' },
+                  (lowStock.length ? lowStock : [{ name: 'Brake Pad Set', stock: 2 }, { name: 'Starter Motor', stock: 1 }, { name: 'Radiator Hose', stock: 3 }]).slice(0, 4).map((item, index) => React.createElement('div', { className: 'alert-item', key: item.name || index },
+                    React.createElement('div', { className: 'alert-left' },
                       React.createElement('span', { className: 'alert-dot', style: { background: index % 2 === 0 ? '#ef4444' : '#f59e0b' } }),
                       React.createElement('div', { className: 'alert-text' }, React.createElement('strong', null, item.name), React.createElement('span', null, `${item.stock} units remaining`))
                     ),
@@ -1030,69 +553,34 @@
               )
             )
           ),
-          React.createElement(
-            'section',
-            { className: 'mid-grid' },
-            React.createElement(
-              'div',
-              { className: 'panel' },
-              React.createElement(
-                'div',
-                { className: 'panel-head' },
-                React.createElement('div', null, React.createElement('h3', null, 'Top selling products')),
-                React.createElement('small', null, 'This month')
-              ),
-              React.createElement(
-                'div',
-                { className: 'panel-body' },
-                React.createElement(
-                  'div',
-                  { className: 'grid-cards' },
-                  filteredProducts.map((product) => React.createElement(
-                    'div',
-                    { className: 'product-card', key: product.id },
+          React.createElement('section', { className: 'mid-grid' },
+            React.createElement('div', { className: 'panel' },
+              React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Top selling products')), React.createElement('small', null, 'This month')),
+              React.createElement('div', { className: 'panel-body' },
+                React.createElement('div', { className: 'grid-cards' },
+                  filteredProducts.map((product) => React.createElement('div', { className: 'product-card', key: product.id },
                     React.createElement('div', { className: 'product-image' }),
                     React.createElement('span', { className: 'tag' }, product.category || 'Spare part'),
                     React.createElement('h4', null, product.name),
-                    React.createElement(
-                      'div',
-                      { className: 'product-meta' },
-                      React.createElement('span', null, product.brand || 'Brand'),
-                      React.createElement('span', null, product.model || 'Model')
-                    ),
-                    React.createElement(
-                      'div',
-                      { className: 'product-bottom' },
+                    React.createElement('div', { className: 'product-meta' }, React.createElement('span', null, product.brand || 'Brand'), React.createElement('span', null, product.model || 'Model')),
+                    React.createElement('div', { className: 'product-bottom' },
                       React.createElement('div', null, React.createElement('div', { className: 'price' }, money(product.price || 0)), React.createElement('small', null, `Sold: ${product.sold || 14}`)),
-                      React.createElement('button', { className: 'btn-small' }, 'View')
+                      React.createElement('button', { className: 'btn-small', onClick: () => setMenu('products') }, 'View')
                     )
                   ))
                 )
               )
             ),
-            React.createElement(
-              'div',
-              { className: 'panel' },
-              React.createElement(
-                'div',
-                { className: 'panel-head' },
-                React.createElement('div', null, React.createElement('h3', null, 'BISWOKARMA AI')),
-                React.createElement('small', null, 'Insights')
-              ),
-              React.createElement(
-                'div',
-                { className: 'panel-body' },
-                React.createElement(
-                  'div',
-                  { className: 'insight-list' },
+            React.createElement('div', { className: 'panel' },
+              React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'BISWOKARMA AI')), React.createElement('small', null, 'Insights')),
+              React.createElement('div', { className: 'panel-body' },
+                React.createElement('div', { className: 'insight-list' },
                   [
                     { icon: '⚠', title: 'Brake pad stock is below reorder threshold.', detail: 'Only 2 units left.' },
                     { icon: '📈', title: 'Revenue trend is up by 18.4%.', detail: 'Over the last 30 days.' },
                     { icon: '📦', title: '8 products should be restocked.', detail: 'Supplier orders are due soon.' },
                     { icon: '💰', title: 'Brake & clutch category leads sales.', detail: 'About 38% of total revenue.' }
-                  ].map((item) => React.createElement(
-                    'div',
-                    { className: 'insight-item', key: item.title },
+                  ].map((item) => React.createElement('div', { className: 'insight-item', key: item.title },
                     React.createElement('div', { className: 'insight-icon' }, item.icon),
                     React.createElement('div', { className: 'insight-text' }, React.createElement('strong', null, item.title), React.createElement('span', null, item.detail))
                   ))
@@ -1100,96 +588,42 @@
               )
             )
           ),
-          React.createElement(
-            'section',
-            { className: 'bottom-grid' },
-            React.createElement(
-              'div',
-              { className: 'panel' },
-              React.createElement(
-                'div',
-                { className: 'panel-head' },
-                React.createElement('div', null, React.createElement('h3', null, 'Live operations')),
-                React.createElement('small', null, 'Updated just now')
-              ),
-              React.createElement(
-                'div',
-                { className: 'panel-body' },
-                React.createElement(
-                  'table',
-                  null,
+          React.createElement('section', { className: 'bottom-grid' },
+            React.createElement('div', { className: 'panel' },
+              React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Live operations')), React.createElement('small', null, 'Updated just now')),
+              React.createElement('div', { className: 'panel-body' },
+                React.createElement('table', null,
                   React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, 'Activity'), React.createElement('th', null, 'Details'), React.createElement('th', null, 'Time'))),
-                  React.createElement(
-                    'tbody',
-                    null,
-                    recentUpdates.map((row, idx) => React.createElement('tr', { key: `${row.title}-${idx}` }, React.createElement('td', null, row.title), React.createElement('td', null, row.detail), React.createElement('td', null, row.time)))
-                  )
+                  React.createElement('tbody', null, recentUpdates.map((row, idx) => React.createElement('tr', { key: `${row.title}-${idx}` }, React.createElement('td', null, row.title), React.createElement('td', null, row.detail), React.createElement('td', null, row.time))))
                 )
               )
             ),
-            React.createElement(
-              'div',
-              { className: 'panel' },
-              React.createElement(
-                'div',
-                { className: 'panel-head' },
-                React.createElement('div', null, React.createElement('h3', null, 'Quick actions')),
-                React.createElement('small', null, 'Fast entry')
-              ),
-              React.createElement(
-                'div',
-                { className: 'panel-body' },
-                React.createElement(
-                  'div',
-                  { className: 'quick-actions' },
-                  ['+ Add Product', '+ Create Invoice', '+ Add Stock', '+ New Customer', '+ Add Supplier', '+ View Inquiries'].map((label) => React.createElement('button', { className: 'quick-btn', key: label }, label))
+            React.createElement('div', { className: 'panel' },
+              React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Quick actions')), React.createElement('small', null, 'Fast entry')),
+              React.createElement('div', { className: 'panel-body' },
+                React.createElement('div', { className: 'quick-actions' },
+                  ['+ Add Product', '+ Create Invoice', '+ Add Stock', '+ New Customer', '+ Add Supplier', '+ View Inquiries'].map((label) => React.createElement('button', { className: 'quick-btn', key: label, onClick: () => { if (label.includes('Product')) setModal('product'); else if (label.includes('Invoice')) setModal('invoice'); else if (label.includes('Customer')) setMenu('customers'); else if (label.includes('Supplier')) setMenu('suppliers'); else if (label.includes('Inquiries')) setMenu('inquiries'); else setMenu('inventory'); } }, label))
                 )
               )
             )
           )
         );
 
-        const renderProducts = () => React.createElement(
-          'div',
-          { className: 'panel' },
-          React.createElement(
-            'div',
-            { className: 'panel-head' },
-            React.createElement('div', null, React.createElement('h3', null, 'Product management')),
-            React.createElement('button', { className: 'btn primary' }, '+ Add Product')
-          ),
-          React.createElement(
-            'div',
-            { className: 'panel-body' },
-            React.createElement(
-              'table',
-              null,
+        const renderProducts = () => React.createElement('div', { className: 'panel' },
+          React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Product management')), React.createElement('button', { className: 'btn primary', onClick: () => setModal('product') }, '+ Add Product')),
+          React.createElement('div', { className: 'panel-body' },
+            React.createElement('table', null,
               React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, 'Product'), React.createElement('th', null, 'Brand'), React.createElement('th', null, 'SKU'), React.createElement('th', null, 'Price'), React.createElement('th', null, 'Stock'), React.createElement('th', null, 'Status'))),
-              React.createElement(
-                'tbody',
-                null,
-                parts.slice(0, 8).map((item) => React.createElement('tr', { key: item.id }, React.createElement('td', null, item.name), React.createElement('td', null, item.brand), React.createElement('td', null, item.sku), React.createElement('td', null, money(item.price)), React.createElement('td', null, item.stock), React.createElement('td', null, React.createElement(StatusTag, { kind: asNumber(item.stock) > 5 ? 'success' : 'warn' }, asNumber(item.stock) > 5 ? 'In stock' : 'Low'))))
-              )
+              React.createElement('tbody', null, parts.slice(0, 8).map((item) => React.createElement('tr', { key: item.id }, React.createElement('td', null, item.name), React.createElement('td', null, item.brand), React.createElement('td', null, item.sku), React.createElement('td', null, money(item.price)), React.createElement('td', null, item.stock), React.createElement('td', null, React.createElement(StatusTag, { kind: asNumber(item.stock) > 5 ? 'success' : 'warn' }, asNumber(item.stock) > 5 ? 'In stock' : 'Low')))))
             )
           )
         );
 
-        const renderInventory = () => React.createElement(
-          'div',
-          { className: 'panel' },
-          React.createElement(
-            'div',
-            { className: 'panel-head' },
-            React.createElement('div', null, React.createElement('h3', null, 'Inventory management')),
-            React.createElement('button', { className: 'btn primary' }, 'Stock update')
-          ),
-          React.createElement(
-            'div',
-            { className: 'panel-body' },
-            React.createElement(
-              'div',
-              { className: 'kpis' },
-              React.createElement(KpiCard, { title: 'Total stock', value: String(parts.reduce((s, item) => s + asNumber(item.stock), 0)), delta: 4.2, tone: 'blue', icon: '▤', subtitle: 'units' }),
+        const renderInventory = () => React.createElement('div', { className: 'panel' },
+          React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Inventory management')), React.createElement('button', { className: 'btn primary', onClick: () => setModal('product') }, 'Stock update')),
+          React.createElement('div', { className: 'panel-body' },
+            React.createElement('div', { className: 'kpis' },
+              React.createElement(KpiCard, { title: 'Total stock', value: String(parts.reduce((sum, item) => sum + asNumber(item.stock), 0)), delta: 4.2, tone: 'blue', icon: '▤', subtitle: 'units' }),
               React.createElement(KpiCard, { title: 'Inventory value', value: money(inventoryValue), delta: 2.8, tone: 'purple', icon: '◫', subtitle: 'current stock' }),
               React.createElement(KpiCard, { title: 'Low stock', value: String(lowStock.length), delta: -3.4, tone: 'red', icon: '⚑', subtitle: 'needs reorder' }),
               React.createElement(KpiCard, { title: 'Out of stock', value: String(parts.filter((p) => asNumber(p.stock) === 0).length), delta: 0, tone: 'primary', icon: '⎇', subtitle: 'critical' })
@@ -1197,154 +631,68 @@
           )
         );
 
-        const renderOrders = () => React.createElement(
-          'div',
-          { className: 'panel' },
-          React.createElement(
-            'div',
-            { className: 'panel-head' },
-            React.createElement('div', null, React.createElement('h3', null, 'Order management')),
-            React.createElement('button', { className: 'btn primary' }, '+ New order')
-          ),
-          React.createElement(
-            'div',
-            { className: 'panel-body' },
-            React.createElement(
-              'table',
-              null,
+        const renderOrders = () => React.createElement('div', { className: 'panel' },
+          React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Order management')), React.createElement('button', { className: 'btn primary', onClick: () => setModal('invoice') }, '+ New order')),
+          React.createElement('div', { className: 'panel-body' },
+            React.createElement('table', null,
               React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, 'Order ID'), React.createElement('th', null, 'Customer'), React.createElement('th', null, 'Total'), React.createElement('th', null, 'Status'), React.createElement('th', null, 'Date'))),
-              React.createElement(
-                'tbody',
-                null,
-                bills.slice(0, 7).map((bill, idx) => React.createElement('tr', { key: bill.id || idx }, React.createElement('td', null, bill.invoiceNo || `BW-${idx + 1001}`), React.createElement('td', null, bill.customer && bill.customer.name ? bill.customer.name : 'Walk-in customer'), React.createElement('td', null, money(bill.total)), React.createElement('td', null, React.createElement(StatusTag, { kind: bill.status === 'Paid' ? 'success' : 'info' }, bill.status || 'Pending')), React.createElement('td', null, bill.date || 'Today')))
-              )
+              React.createElement('tbody', null, bills.slice(0, 7).map((bill, idx) => React.createElement('tr', { key: bill.id || idx }, React.createElement('td', null, bill.invoiceNo || `BW-${idx + 1001}`), React.createElement('td', null, bill.customer && bill.customer.name ? bill.customer.name : 'Walk-in customer'), React.createElement('td', null, money(bill.total)), React.createElement('td', null, React.createElement(StatusTag, { kind: bill.status === 'Paid' ? 'success' : 'info' }, bill.status || 'Pending')), React.createElement('td', null, bill.date || 'Today'))))
             )
           )
         );
 
-        const renderCustomers = () => React.createElement(
-          'div',
-          { className: 'panel' },
-          React.createElement(
-            'div',
-            { className: 'panel-head' },
-            React.createElement('div', null, React.createElement('h3', null, 'Customer CRM')),
-            React.createElement('button', { className: 'btn primary' }, '+ Add customer')
-          ),
-          React.createElement(
-            'div',
-            { className: 'panel-body' },
-            React.createElement(
-              'table',
-              null,
+        const renderCustomers = () => React.createElement('div', { className: 'panel' },
+          React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Customer CRM')), React.createElement('button', { className: 'btn primary' }, '+ Add customer')),
+          React.createElement('div', { className: 'panel-body' },
+            React.createElement('table', null,
               React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, 'Name'), React.createElement('th', null, 'Phone'), React.createElement('th', null, 'Orders'), React.createElement('th', null, 'Spend'), React.createElement('th', null, 'Status'))),
-              React.createElement(
-                'tbody',
-                null,
-                customers.slice(0, 7).map((customer, idx) => React.createElement('tr', { key: customer.id || customer.name || idx }, React.createElement('td', null, customer.name), React.createElement('td', null, customer.phone || '-'), React.createElement('td', null, customer.orders || 1), React.createElement('td', null, money(customer.spend || 0)), React.createElement('td', null, React.createElement(StatusTag, { kind: idx % 2 === 0 ? 'success' : 'neutral' }, idx % 2 === 0 ? 'Active' : 'Review'))))
-              )
+              React.createElement('tbody', null, customers.slice(0, 7).map((customer, idx) => React.createElement('tr', { key: customer.id || customer.name || idx }, React.createElement('td', null, customer.name), React.createElement('td', null, customer.phone || '-'), React.createElement('td', null, customer.orders || 1), React.createElement('td', null, money(customer.spend || 0)), React.createElement('td', null, React.createElement(StatusTag, { kind: idx % 2 === 0 ? 'success' : 'neutral' }, idx % 2 === 0 ? 'Active' : 'Review')))))
             )
           )
         );
 
-        const renderSuppliers = () => React.createElement(
-          'div',
-          { className: 'panel' },
-          React.createElement(
-            'div',
-            { className: 'panel-head' },
-            React.createElement('div', null, React.createElement('h3', null, 'Supplier management')),
-            React.createElement('button', { className: 'btn primary' }, '+ Add supplier')
-          ),
-          React.createElement(
-            'div',
-            { className: 'panel-body' },
-            React.createElement(
-              'table',
-              null,
+        const renderSuppliers = () => React.createElement('div', { className: 'panel' },
+          React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Supplier management')), React.createElement('button', { className: 'btn primary' }, '+ Add supplier')),
+          React.createElement('div', { className: 'panel-body' },
+            React.createElement('table', null,
               React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, 'Supplier'), React.createElement('th', null, 'Category'), React.createElement('th', null, 'Contact'), React.createElement('th', null, 'Outstanding'), React.createElement('th', null, 'Status'))),
-              React.createElement(
-                'tbody',
-                null,
-                suppliers.slice(0, 7).map((supplier, idx) => React.createElement('tr', { key: supplier.id || supplier.name || idx }, React.createElement('td', null, supplier.name), React.createElement('td', null, supplier.category), React.createElement('td', null, supplier.contact || '-'), React.createElement('td', null, money(supplier.outstanding || 0)), React.createElement('td', null, React.createElement(StatusTag, { kind: idx % 2 === 0 ? 'warn' : 'success' }, idx % 2 === 0 ? 'Review' : 'Settled'))))
-              )
+              React.createElement('tbody', null, suppliers.slice(0, 7).map((supplier, idx) => React.createElement('tr', { key: supplier.id || supplier.name || idx }, React.createElement('td', null, supplier.name), React.createElement('td', null, supplier.category), React.createElement('td', null, supplier.contact || '-'), React.createElement('td', null, money(supplier.outstanding || 0)), React.createElement('td', null, React.createElement(StatusTag, { kind: idx % 2 === 0 ? 'warn' : 'success' }, idx % 2 === 0 ? 'Review' : 'Settled')))))
             )
           )
         );
 
-        const renderBilling = () => React.createElement(
-          'div',
-          { className: 'panel' },
-          React.createElement(
-            'div',
-            { className: 'panel-head' },
-            React.createElement('div', null, React.createElement('h3', null, 'Billing and invoices')),
-            React.createElement('button', { className: 'btn primary' }, '+ New invoice')
-          ),
-          React.createElement(
-            'div',
-            { className: 'panel-body' },
-            React.createElement(
-              'table',
-              null,
+        const renderBilling = () => React.createElement('div', { className: 'panel' },
+          React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Billing and invoices')), React.createElement('button', { className: 'btn primary', onClick: () => setModal('invoice') }, '+ New invoice')),
+          React.createElement('div', { className: 'panel-body' },
+            React.createElement('table', null,
               React.createElement('thead', null, React.createElement('tr', null, React.createElement('th', null, 'Invoice'), React.createElement('th', null, 'Customer'), React.createElement('th', null, 'Amount'), React.createElement('th', null, 'Method'), React.createElement('th', null, 'Status'))),
-              React.createElement(
-                'tbody',
-                null,
-                bills.slice(0, 7).map((bill, idx) => React.createElement('tr', { key: bill.id || idx }, React.createElement('td', null, bill.invoiceNo), React.createElement('td', null, bill.customer && bill.customer.name ? bill.customer.name : 'Walk-in'), React.createElement('td', null, money(bill.total)), React.createElement('td', null, bill.method || 'Cash'), React.createElement('td', null, React.createElement(StatusTag, { kind: bill.status === 'Paid' ? 'success' : 'info' }, bill.status || 'Pending'))))
-              )
+              React.createElement('tbody', null, bills.slice(0, 7).map((bill, idx) => React.createElement('tr', { key: bill.id || idx }, React.createElement('td', null, bill.invoiceNo), React.createElement('td', null, bill.customer && bill.customer.name ? bill.customer.name : 'Walk-in'), React.createElement('td', null, money(bill.total)), React.createElement('td', null, bill.method || 'Cash'), React.createElement('td', null, React.createElement(StatusTag, { kind: bill.status === 'Paid' ? 'success' : 'info' }, bill.status || 'Pending')))))
             )
           )
         );
 
-        const renderReports = () => React.createElement(
-          'div',
-          { className: 'panel' },
-          React.createElement(
-            'div',
-            { className: 'panel-head' },
-            React.createElement('div', null, React.createElement('h3', null, 'Reports')),
-            React.createElement('button', { className: 'btn primary' }, 'Export PDF')
-          ),
-          React.createElement(
-            'div',
-            { className: 'panel-body' },
-            React.createElement(
-              'div',
-              { className: 'kpis' },
+        const renderReports = () => React.createElement('div', { className: 'panel' },
+          React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Reports')), React.createElement('button', { className: 'btn primary' }, 'Export PDF')),
+          React.createElement('div', { className: 'panel-body' },
+            React.createElement('div', { className: 'kpis' },
               React.createElement(KpiCard, { title: 'Sales report', value: money(totalRevenue), delta: 16.2, tone: 'amber', icon: '↗', subtitle: 'last 30 days' }),
               React.createElement(KpiCard, { title: 'Expense report', value: money(purchases.reduce((sum, item) => sum + asNumber(item.total), 0)), delta: 10.4, tone: 'red', icon: '◍', subtitle: 'supplier spend' }),
-              React.createElement(KpiCard, { title: 'Profit report', value: money(totalProfit), delta: 12.1, tone: 'green', icon: '◌', subtitle: 'net earning' }),
+              React.createElement(KpiCard, { title: 'Profit report', value: money(totalProfit), delta: 12.1, tone: 'green', icon: '◌', subtitle: 'net earnings' }),
               React.createElement(KpiCard, { title: 'Inventory report', value: String(lowStock.length), delta: 0, tone: 'blue', icon: '▤', subtitle: 'low stock alerts' })
             )
           )
         );
 
-        const renderSettings = () => React.createElement(
-          'div',
-          { className: 'panel' },
-          React.createElement(
-            'div',
-            { className: 'panel-head' },
-            React.createElement('div', null, React.createElement('h3', null, 'Business settings')),
-            React.createElement('button', { className: 'btn primary' }, 'Save settings')
-          ),
-          React.createElement(
-            'div',
-            { className: 'panel-body' },
-            React.createElement(
-              'div',
-              { className: 'alert-list' },
+        const renderSettings = () => React.createElement('div', { className: 'panel' },
+          React.createElement('div', { className: 'panel-head' }, React.createElement('div', null, React.createElement('h3', null, 'Business settings')), React.createElement('button', { className: 'btn primary' }, 'Save settings')),
+          React.createElement('div', { className: 'panel-body' },
+            React.createElement('div', { className: 'alert-list' },
               [
                 { title: 'Theme mode', detail: 'Light / Dark', color: '#60a5fa', action: theme === 'light' ? 'Dark' : 'Light' },
                 { title: 'Tax settings', detail: 'VAT and service rules', color: '#34d399', action: 'Manage' },
                 { title: 'Staff permission', detail: 'Control access levels', color: '#fbbf24', action: 'Configure' }
-              ].map((item) => React.createElement(
-                'div',
-                { className: 'alert-item', key: item.title },
-                React.createElement(
-                  'div',
-                  { className: 'alert-left' },
+              ].map((item) => React.createElement('div', { className: 'alert-item', key: item.title },
+                React.createElement('div', { className: 'alert-left' },
                   React.createElement('span', { className: 'alert-dot', style: { background: item.color } }),
                   React.createElement('div', { className: 'alert-text' }, React.createElement('strong', null, item.title), React.createElement('span', null, item.detail))
                 ),
@@ -1370,75 +718,52 @@
         return React.createElement(
           'div',
           { className: 'app-shell' },
-          React.createElement(
-            'aside',
-            { className: 'sidebar' },
-            React.createElement(
-              'div',
-              { className: 'brand' },
-              React.createElement('div', { className: 'brand-mark' }, 'B'),
-              React.createElement(
-                'div',
-                { className: 'brand-copy' },
-                React.createElement('strong', null, 'Biswokarma'),
-                React.createElement('span', null, 'Workshop')
-              )
-            ),
-            React.createElement(
-              'div',
-              { className: 'nav-block' },
-              React.createElement('div', { className: 'nav-label' }, 'Main'),
-              dashboardMenu.map((item) => React.createElement(
-                'button',
-                {
-                  key: item.key,
-                  className: `nav-item ${menu === item.key ? 'active' : ''}`,
-                  onClick: () => setMenu(item.key)
-                },
-                React.createElement(
-                  'div',
-                  { className: 'nav-main' },
-                  React.createElement('span', { className: 'nav-icon' }, item.icon),
-                  React.createElement('span', null, item.label)
+          modal && React.createElement('div', { className: 'modal-backdrop', onClick: () => setModal(null) },
+            React.createElement('div', { className: 'modal', onClick: (e) => e.stopPropagation() },
+              React.createElement('div', { className: 'modal-head' },
+                React.createElement('h3', null, modal === 'product' ? 'Add Product' : 'Create Invoice'),
+                React.createElement('button', { className: 'close-btn', onClick: () => setModal(null) }, '×')
+              ),
+              modal === 'product' ? React.createElement('div', { className: 'modal-body' },
+                React.createElement('div', { className: 'field-grid' },
+                  React.createElement('div', { className: 'field' }, React.createElement('label', null, 'Name'), React.createElement('input', { value: draftProduct.name, onChange: (e) => setDraftProduct((prev) => ({ ...prev, name: e.target.value })) })),
+                  React.createElement('div', { className: 'field' }, React.createElement('label', null, 'Brand'), React.createElement('input', { value: draftProduct.brand, onChange: (e) => setDraftProduct((prev) => ({ ...prev, brand: e.target.value })) })),
+                  React.createElement('div', { className: 'field' }, React.createElement('label', null, 'Model'), React.createElement('input', { value: draftProduct.model, onChange: (e) => setDraftProduct((prev) => ({ ...prev, model: e.target.value })) })),
+                  React.createElement('div', { className: 'field' }, React.createElement('label', null, 'SKU'), React.createElement('input', { value: draftProduct.sku, onChange: (e) => setDraftProduct((prev) => ({ ...prev, sku: e.target.value })) })),
+                  React.createElement('div', { className: 'field' }, React.createElement('label', null, 'Price'), React.createElement('input', { type: 'number', value: draftProduct.price, onChange: (e) => setDraftProduct((prev) => ({ ...prev, price: e.target.value })) })),
+                  React.createElement('div', { className: 'field' }, React.createElement('label', null, 'Stock'), React.createElement('input', { type: 'number', value: draftProduct.stock, onChange: (e) => setDraftProduct((prev) => ({ ...prev, stock: e.target.value })) })),
+                  React.createElement('div', { className: 'field', style: { gridColumn: '1 / -1' } }, React.createElement('label', null, 'Category'), React.createElement('select', { value: draftProduct.category, onChange: (e) => setDraftProduct((prev) => ({ ...prev, category: e.target.value })) }, React.createElement('option', { value: 'Hydraulics' }, 'Hydraulics'), React.createElement('option', { value: 'Brakes' }, 'Brakes'), React.createElement('option', { value: 'Electrical' }, 'Electrical'), React.createElement('option', { value: 'Filters' }, 'Filters'), React.createElement('option', { value: 'Cooling' }, 'Cooling')))
                 ),
-                React.createElement('span', { className: 'nav-badge' }, item.label === 'Dashboard' ? 'Live' : '')
-              ))
+                React.createElement('div', { className: 'modal-actions' }, React.createElement('button', { className: 'btn secondary', onClick: () => setModal(null) }, 'Cancel'), React.createElement('button', { className: 'btn primary', onClick: createProduct }, 'Save Product'))
+              ) : React.createElement('div', { className: 'modal-body' },
+                React.createElement('div', { className: 'field-grid' },
+                  React.createElement('div', { className: 'field' }, React.createElement('label', null, 'Invoice #'), React.createElement('input', { value: draftInvoice.invoiceNo, onChange: (e) => setDraftInvoice((prev) => ({ ...prev, invoiceNo: e.target.value })) })),
+                  React.createElement('div', { className: 'field' }, React.createElement('label', null, 'Customer'), React.createElement('input', { value: draftInvoice.customer, onChange: (e) => setDraftInvoice((prev) => ({ ...prev, customer: e.target.value })) })),
+                  React.createElement('div', { className: 'field' }, React.createElement('label', null, 'Total Amount'), React.createElement('input', { type: 'number', value: draftInvoice.total, onChange: (e) => setDraftInvoice((prev) => ({ ...prev, total: e.target.value })) })),
+                  React.createElement('div', { className: 'field' }, React.createElement('label', null, 'Payment Method'), React.createElement('select', { value: draftInvoice.method, onChange: (e) => setDraftInvoice((prev) => ({ ...prev, method: e.target.value })) }, React.createElement('option', { value: 'Cash' }, 'Cash'), React.createElement('option', { value: 'Bank Transfer' }, 'Bank Transfer'), React.createElement('option', { value: 'QR' }, 'QR'), React.createElement('option', { value: 'Card' }, 'Card')))
+                ),
+                React.createElement('div', { className: 'modal-actions' }, React.createElement('button', { className: 'btn secondary', onClick: () => setModal(null) }, 'Cancel'), React.createElement('button', { className: 'btn primary', onClick: createInvoice }, 'Save Invoice'))
+              )
             )
           ),
-          React.createElement(
-            'div',
-            { className: 'content-wrap' },
-            React.createElement(
-              'header',
-              { className: 'topbar' },
-              React.createElement(
-                'div',
-                { className: 'search-box' },
-                React.createElement('span', null, '⌕'),
-                React.createElement('input', { value: search, onChange: (e) => setSearch(e.target.value), placeholder: 'Search products, customers, orders, invoices...' })
-              ),
-              React.createElement(
-                'div',
-                { className: 'header-actions' },
+          React.createElement('aside', { className: 'sidebar' },
+            React.createElement('div', { className: 'brand' }, React.createElement('div', { className: 'brand-mark' }, 'B'), React.createElement('div', { className: 'brand-copy' }, React.createElement('strong', null, 'Biswokarma'), React.createElement('span', null, 'Workshop'))),
+            React.createElement('div', { className: 'nav-block' },
+              React.createElement('div', { className: 'nav-label' }, 'Main'),
+              dashboardMenu.map((item) => React.createElement('button', { key: item.key, className: `nav-item ${menu === item.key ? 'active' : ''}`, onClick: () => setMenu(item.key) }, React.createElement('div', { className: 'nav-main' }, React.createElement('span', { className: 'nav-icon' }, item.icon), React.createElement('span', null, item.label)), React.createElement('span', { className: 'nav-badge' }, item.label === 'Dashboard' ? 'Live' : '')))
+            )
+          ),
+          React.createElement('div', { className: 'content-wrap' },
+            React.createElement('header', { className: 'topbar' },
+              React.createElement('div', { className: 'search-box' }, React.createElement('span', null, '⌕'), React.createElement('input', { value: search, onChange: (e) => setSearch(e.target.value), placeholder: 'Search products, customers, orders, invoices...' })),
+              React.createElement('div', { className: 'header-actions' },
                 React.createElement('button', { className: 'icon-btn', onClick: () => setTheme((current) => current === 'light' ? 'dark' : 'light') }, theme === 'light' ? '☾' : '☀'),
                 React.createElement('button', { className: 'icon-btn' }, '🔔'),
                 React.createElement('button', { className: 'icon-btn' }, '✉'),
-                React.createElement(
-                  'div',
-                  { className: 'user-box' },
-                  React.createElement('div', { className: 'avatar' }, 'K'),
-                  React.createElement(
-                    'div',
-                    { className: 'user-meta' },
-                    React.createElement('strong', null, 'Kunal'),
-                    React.createElement('span', null, 'Owner')
-                  )
-                )
+                React.createElement('div', { className: 'user-box' }, React.createElement('div', { className: 'avatar' }, 'K'), React.createElement('div', { className: 'user-meta' }, React.createElement('strong', null, 'Kunal'), React.createElement('span', null, 'Owner')))
               )
             ),
-            React.createElement(
-              'main',
-              { className: 'page' },
+            React.createElement('main', { className: 'page' },
               React.createElement('div', { className: 'crumb' }, menu),
               contentByMenu[menu] || contentByMenu.overview
             )
