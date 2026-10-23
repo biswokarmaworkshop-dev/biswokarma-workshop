@@ -1,0 +1,242 @@
+[
+  {
+    "id": "moto-001",
+    "name": "Brake Pad Set",
+    "partNumber": "BW-MOTO-001",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Brakes",
+    "description": "Reference listing only. Confirm motorcycle make, model, year and brake assembly with the workshop."
+  },
+  {
+    "id": "moto-002",
+    "name": "Brake Shoe Set",
+    "partNumber": "BW-MOTO-002",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Brakes",
+    "description": "Reference listing only. Confirm motorcycle make, model, year and brake assembly with the workshop."
+  },
+  {
+    "id": "moto-003",
+    "name": "Front Brake Disc",
+    "partNumber": "BW-MOTO-003",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Brakes",
+    "description": "Reference listing only. Confirm dimensions and mounting pattern with the workshop."
+  },
+  {
+    "id": "moto-004",
+    "name": "Brake Cable",
+    "partNumber": "BW-MOTO-004",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Brakes",
+    "description": "Reference listing only. Confirm cable length and end fittings with the workshop."
+  },
+  {
+    "id": "moto-005",
+    "name": "Clutch Plate Set",
+    "partNumber": "BW-MOTO-005",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Clutch & transmission",
+    "description": "Reference listing only. Confirm engine and clutch specifications with the workshop."
+  },
+  {
+    "id": "moto-006",
+    "name": "Clutch Cable",
+    "partNumber": "BW-MOTO-006",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Clutch & transmission",
+    "description": "Reference listing only. Confirm cable length and end fittings with the workshop."
+  },
+  {
+    "id": "moto-007",
+    "name": "Drive Chain",
+    "partNumber": "BW-MOTO-007",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Clutch & transmission",
+    "description": "Reference listing only. Confirm chain pitch, link count and motorcycle model with the workshop."
+  },
+  {
+    "id": "moto-008",
+    "name": "Chain and Sprocket Set",
+    "partNumber": "BW-MOTO-008",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Clutch & transmission",
+    "description": "Reference listing only. Confirm chain pitch, sprocket teeth and motorcycle model with the workshop."
+  },
+  {
+    "id": "moto-009",
+    "name": "Front Sprocket",
+    "partNumber": "BW-MOTO-009",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Clutch & transmission",
+    "description": "Reference listing only. Confirm spline, offset and tooth count with the workshop."
+  },
+  {
+    "id": "moto-010",
+    "name": "Rear Sprocket",
+    "partNumber": "BW-MOTO-010",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Clutch & transmission",
+    "description": "Reference listing only. Confirm bolt pattern, offset and tooth count with the workshop."
+  },
+  {
+    "id": "moto-011",
+    "name": "Spark Plug",
+    "partNumber": "BW-MOTO-011",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Engine",
+    "description": "Reference listing only. Confirm the plug code and heat range against the engine specification."
+  },
+  {
+    "id": "moto-012",
+    "name": "Air Filter Element",
+    "partNumber": "BW-MOTO-012",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Engine",
+    "description": "Reference listing only. Confirm air-box shape and engine variant with the workshop."
+  },
+  {
+    "id": "moto-013",
+    "name": "Oil Filter",
+    "partNumber": "BW-MOTO-013",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Engine",
+    "description": "Reference listing only. Confirm thread, dimensions and engine variant with the workshop."
+  },
+  {
+    "id": "moto-014",
+    "name": "Piston Ring Set",
+    "partNumber": "BW-MOTO-014",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Engine",
+    "description": "Reference listing only. Confirm bore size and engine code with the workshop."
+  },
+  {
+    "id": "moto-015",
+    "name": "Cylinder Head Gasket",
+    "partNumber": "BW-MOTO-015",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Engine",
+    "description": "Reference listing only. Confirm engine code and gasket dimensions with the workshop."
+  },
+  {
+    "id": "moto-016",
+    "name": "Engine Valve Set",
+    "partNumber": "BW-MOTO-016",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Engine",
+    "description": "Reference listing only. Confirm valve dimensions and engine code with the workshop."
+  },
+  {
+    "id": "moto-017",
+    "name": "Fuel Filter",
+    "partNumber": "BW-MOTO-017",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Fuel & intake",
+    "description": "Reference listing only. Confirm fuel-system layout and connector type with the workshop."
+  },
+  {
+    "id": "moto-018",
+    "name": "Fuel Pump",
+    "partNumber": "BW-MOTO-018",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Fuel & intake",
+    "description": "Reference listing only. Confirm fuel-system type, pressure and connector with the workshop."
+  },
+  {
+    "id": "moto-019",
+    "name": "Carburetor Repair Kit",
+    "partNumber": "BW-MOTO-019",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Fuel & intake",
+    "description": "Reference listing only. Confirm carburetor make, model and jet sizes with the workshop."
+  },
+  {
+    "id": "moto-020",
+    "name": "Throttle Cable",
+    "partNumber": "BW-MOTO-020",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Fuel & intake",
+    "description": "Reference listing only. Confirm cable routing, length and end fittings with the workshop."
+  },
+  {
+    "id": "moto-021",
+    "name": "Battery",
+    "partNumber": "BW-MOTO-021",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Electrical",
+    "description": "Reference listing only. Confirm voltage, dimensions, terminal layout and capacity with the workshop."
+  },
+  {
+    "id": "moto-022",
+    "name": "Starter Motor",
+    "partNumber": "BW-MOTO-022",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Electrical",
+    "description": "Reference listing only. Confirm mounting, gear and electrical connections with the workshop."
+  },
+  {
+    "id": "moto-023",
+    "name": "Headlamp Assembly",
+    "partNumber": "BW-MOTO-023",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Electrical",
+    "description": "Reference listing only. Confirm housing shape, connector and mounting points with the workshop."
+  },
+  {
+    "id": "moto-024",
+    "name": "Wiring Harness",
+    "partNumber": "BW-MOTO-024",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Electrical",
+    "description": "Reference listing only. Confirm electrical system and connector layout with the workshop."
+  },
+  {
+    "id": "moto-025",
+    "name": "Front Fork Seal Kit",
+    "partNumber": "BW-MOTO-025",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Suspension & wheels",
+    "description": "Reference listing only. Confirm fork tube and seal dimensions with the workshop."
+  },
+  {
+    "id": "moto-026",
+    "name": "Rear Shock Absorber",
+    "partNumber": "BW-MOTO-026",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Suspension & wheels",
+    "description": "Reference listing only. Confirm length, mounting and motorcycle model with the workshop."
+  },
+  {
+    "id": "moto-027",
+    "name": "Wheel Bearing Set",
+    "partNumber": "BW-MOTO-027",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Suspension & wheels",
+    "description": "Reference listing only. Confirm bearing dimensions and wheel position with the workshop."
+  },
+  {
+    "id": "moto-028",
+    "name": "Wheel Spoke Set",
+    "partNumber": "BW-MOTO-028",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Suspension & wheels",
+    "description": "Reference listing only. Confirm wheel diameter, spoke length and hub with the workshop."
+  },
+  {
+    "id": "moto-029",
+    "name": "Mirror Set",
+    "partNumber": "BW-MOTO-029",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Body & controls",
+    "description": "Reference listing only. Confirm thread direction, stem length and mounting with the workshop."
+  },
+  {
+    "id": "moto-030",
+    "name": "Handlebar Grip Set",
+    "partNumber": "BW-MOTO-030",
+    "partNumberType": "Workshop reference (not an OEM part number)",
+    "category": "Body & controls",
+    "description": "Reference listing only. Confirm grip diameter and throttle-side configuration with the workshop."
+  }
+]

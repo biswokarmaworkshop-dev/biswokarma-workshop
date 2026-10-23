@@ -102,21 +102,28 @@
     };
   }
 
-  function catalogListing(product, illustration, illustrationSource) {
-    const images = illustrativeImages(illustration, illustrationSource);
+  function catalogListing(product) {
     return {
-      ...product,
-      brand: "Supplier details unverified",
+      id: String(product.id || ""),
+      name: String(product.name || "Motorcycle part reference"),
+      partNumber: String(product.partNumber || ""),
+      partNumberType: String(
+        product.partNumberType || "Workshop reference (not an OEM part number)",
+      ),
+      category: String(product.category || "General"),
+      description: String(
+        product.description ||
+          "Reference listing only. Confirm exact fitment with the workshop.",
+      ),
+      brand: null,
       brandVerified: false,
       priceNpr: null,
       priceBasis: "Request a quote; no verified supplier price",
       stock: null,
       availability: "confirm_with_workshop",
       compatibleModels: [],
-      description:
-        "Unverified demo catalog entry for quote requests. Confirm supplier, exact machine and serial-number fitment, specifications, price and availability with the workshop.",
       specs: {},
-      images,
+      images: [],
       catalogSource: "demo_catalog",
     };
   }

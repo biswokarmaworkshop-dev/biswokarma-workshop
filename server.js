@@ -7,13 +7,24 @@ const { Pool } = require("pg");
 const https = require("https");
 
 const port = process.env.PORT || 3000;
-const htmlFile = path.join(__dirname, "biswokarma-workshop (1).html");
-const localDatabaseFile = path.join(__dirname, "workshop-state.json");
+const htmlFile = path.join(__dirname, "site.html");
+const localDatabaseFile = path.resolve(
+  process.env.WORKSHOP_STATE_FILE ||
+    path.join(__dirname, "workshop-state.json"),
+);
 const vendorDirectory = path.join(__dirname, "vendor");
 const imagesDirectory = path.join(__dirname, "images");
-const jcbProductCatalog = require("./data/jcb-parts.json");
-const illustrativePartImages = require("./data/illustrative-jcb-parts.json");
+const motorcycleProductCatalog = require("./data/motorcycle-parts.json");
 const { catalogListing } = require("./vendor/catalog");
+const {
+  createSessionToken,
+  credentialConfiguration,
+  verifyPassword,
+  verifySessionToken,
+} = require("./vendor/auth");
+const loginAttempts = new Map();
+const inquiryAttempts = new Map();
+const ownerOnlyStateKeys = new Set(["bills", "purchases", "settings"]);
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -74,6 +85,80 @@ function json(response, status, body) {
   response.end(JSON.stringify(body));
 }
 
+function readCookie(request, name) {
+  const cookieHeader = request.headers.cookie || "";
+  for (const entry of cookieHeader.split(";")) {
+    const separator = entry.indexOf("=");
+    if (separator < 0) continue;
+    if (entry.slice(0, separator).trim() === name)
+      return entry.slice(separator + 1).trim();
+  }
+  return "";
+}
+
+function currentUser(request) {
+  const configuration = credentialConfiguration(process.env);
+  if (!configuration.configured) return null;
+  const user = verifySessionToken(
+    readCookie(request, "bw_session"),
+    configuration.sessionSecret,
+  );
+  if (!user) return null;
+  const account = configuration.accounts[user.role];
+  return account && account.username === user.username ? user : null;
+}
+
+function isSameOrigin(request) {
+  const origin = request.headers.origin;
+  if (typeof origin !== "string" || !request.headers.host) return false;
+  try {
+    const url = new URL(origin);
+    const protocol =
+      process.env.NODE_ENV === "production"
+        ? "https:"
+        : request.socket.encrypted
+          ? "https:"
+          : "http:";
+    return url.origin === `${protocol}//${request.headers.host}`;
+  } catch {
+    return false;
+  }
+}
+
+function rateLimit(map, request, key, limit, windowMs) {
+  const address = request.socket.remoteAddress || "unknown";
+  const rateKey = `${address}:${key}`;
+  const now = Date.now();
+  if (map.size > 10000) {
+    for (const [existingKey, value] of map) {
+      if (now - value.startedAt >= windowMs) map.delete(existingKey);
+    }
+  }
+  const record = map.get(rateKey);
+  if (!record || now - record.startedAt >= windowMs) {
+    map.set(rateKey, { startedAt: now, count: 1 });
+    return true;
+  }
+  record.count += 1;
+  return record.count <= limit;
+}
+
+function sessionCookie(response, token) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  response.setHeader(
+    "Set-Cookie",
+    `bw_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800${secure}`,
+  );
+}
+
+function clearSessionCookie(response) {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  response.setHeader(
+    "Set-Cookie",
+    `bw_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`,
+  );
+}
+
 function readJson(request) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -112,6 +197,86 @@ function writeLocalDatabase(database) {
   fs.renameSync(temporaryFile, localDatabaseFile);
 }
 
+async function saveStateKey(key, value) {
+  if (!pool) {
+    const database = readLocalDatabase();
+    database.state[key] = value;
+    database.version += 1;
+    database.updated_at = new Date().toISOString();
+    database.audit.unshift({
+      key,
+      version: database.version,
+      changed_at: database.updated_at,
+    });
+    database.audit = database.audit.slice(0, 500);
+    writeLocalDatabase(database);
+    return database;
+  }
+  const result = await pool.query(
+    `INSERT INTO workshop_state (id, state, version)
+     VALUES (1, jsonb_build_object($1::text, $2::jsonb), 1)
+     ON CONFLICT (id) DO UPDATE SET state = jsonb_set(workshop_state.state, ARRAY[$1::text], $2::jsonb, true), version = workshop_state.version + 1, updated_at = NOW()
+     RETURNING state, version, updated_at`,
+    [key, JSON.stringify(value)],
+  );
+  await pool.query(
+    "INSERT INTO workshop_state_audit (state_key, value, version) VALUES ($1, $2::jsonb, $3)",
+    [key, JSON.stringify(value), result.rows[0].version],
+  );
+  return result.rows[0];
+}
+
+async function saveInquiry(inquiry) {
+  if (!pool) {
+    const database = readLocalDatabase();
+    const inquiries = Array.isArray(database.state.inquiries)
+      ? database.state.inquiries
+      : [];
+    inquiries.unshift(inquiry);
+    database.state.inquiries = inquiries.slice(0, 500);
+    database.version += 1;
+    database.updated_at = new Date().toISOString();
+    database.audit.unshift({
+      key: "inquiries",
+      version: database.version,
+      changed_at: database.updated_at,
+    });
+    database.audit = database.audit.slice(0, 500);
+    writeLocalDatabase(database);
+    return inquiry;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      "INSERT INTO workshop_state (id, state, version) VALUES (1, '{}'::jsonb, 1) ON CONFLICT (id) DO NOTHING",
+    );
+    const current = await client.query(
+      "SELECT state, version FROM workshop_state WHERE id = 1 FOR UPDATE",
+    );
+    const inquiries = Array.isArray(current.rows[0].state.inquiries)
+      ? current.rows[0].state.inquiries
+      : [];
+    inquiries.unshift(inquiry);
+    const nextInquiries = inquiries.slice(0, 500);
+    const updated = await client.query(
+      "UPDATE workshop_state SET state = jsonb_set(state, '{inquiries}', $1::jsonb, true), version = version + 1, updated_at = NOW() WHERE id = 1 RETURNING version",
+      [JSON.stringify(nextInquiries)],
+    );
+    await client.query(
+      "INSERT INTO workshop_state_audit (state_key, value, version) VALUES ('inquiries', $1::jsonb, $2)",
+      [JSON.stringify(inquiry), updated.rows[0].version],
+    );
+    await client.query("COMMIT");
+    return inquiry;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 const gatewayConfig = {
   esewa: Boolean(
     process.env.ESEWA_MERCHANT_CODE && process.env.ESEWA_SECRET_KEY,
@@ -138,20 +303,110 @@ function verifyWebhook(body, request) {
 }
 
 async function api(request, response, url) {
+  if (url.pathname === "/api/auth/status" && request.method === "GET") {
+    const configuration = credentialConfiguration(process.env);
+    return json(response, 200, {
+      configured: configuration.configured,
+      admin: Boolean(configuration.accounts.admin),
+      owner: Boolean(configuration.accounts.owner),
+    });
+  }
+  if (url.pathname === "/api/auth/me" && request.method === "GET") {
+    return json(response, 200, { user: currentUser(request) });
+  }
+  if (url.pathname === "/api/auth/login" && request.method === "POST") {
+    if (!isSameOrigin(request))
+      return json(response, 403, { error: "Sign-in request origin was rejected" });
+    const configuration = credentialConfiguration(process.env);
+    if (!configuration.configured)
+      return json(response, 503, {
+        error: "Admin and Owner accounts are not configured for this website.",
+      });
+    const body = await readJson(request);
+    const role = String(body.role || "");
+    const username = String(body.username || "").trim();
+    const password = String(body.password || "");
+    if (
+      !["admin", "owner"].includes(role) ||
+      !username ||
+      username.length > 64 ||
+      !password ||
+      password.length > 1024
+    )
+      return json(response, 400, {
+        error: "Choose an account type and enter your username and password.",
+      });
+    if (!rateLimit(loginAttempts, request, `login:${role}:${username.toLowerCase()}`, 8, 15 * 60 * 1000))
+      return json(response, 429, {
+        error: "Too many sign-in attempts. Wait 15 minutes and try again.",
+      });
+    const account = configuration.accounts[role];
+    const usernameMatches =
+      account && username.toLowerCase() === account.username.toLowerCase();
+    const passwordMatches = verifyPassword(
+      password,
+      account?.passwordHash ||
+        configuration.accounts.owner.passwordHash,
+    );
+    if (!usernameMatches || !passwordMatches)
+      return json(response, 401, {
+        error: `The ${role} username or password is incorrect.`,
+      });
+    loginAttempts.delete(
+      `${String(request.socket.remoteAddress || "unknown")}:login:${role}:${username.toLowerCase()}`,
+    );
+    const token = createSessionToken(
+      { username: account.username, role },
+      configuration.sessionSecret,
+    );
+    sessionCookie(response, token);
+    return json(response, 200, {
+      user: { username: account.username, role },
+    });
+  }
+  if (url.pathname === "/api/auth/logout" && request.method === "POST") {
+    if (!isSameOrigin(request))
+      return json(response, 403, { error: "Sign-out request origin was rejected" });
+    clearSessionCookie(response);
+    return json(response, 200, { ok: true });
+  }
   if (url.pathname === "/api/catalog/products" && request.method === "GET") {
     response.setHeader("Cache-Control", "public, max-age=300");
     return json(response, 200, {
-      products: jcbProductCatalog.map((product) =>
-        catalogListing(
-          product,
-          illustrativePartImages.images[product.id],
-          illustrativePartImages.source,
-        ),
+      products: motorcycleProductCatalog.map((product) =>
+        catalogListing(product),
       ),
-      inventoryIllustrations: {
-        source: illustrativePartImages.source,
-        images: illustrativePartImages.inventoryImages,
-      },
+    });
+  }
+  if (url.pathname === "/api/inquiries" && request.method === "POST") {
+    if (!isSameOrigin(request))
+      return json(response, 403, { error: "Inquiry request origin was rejected" });
+    if (!rateLimit(inquiryAttempts, request, "inquiry", 5, 15 * 60 * 1000))
+      return json(response, 429, {
+        error: "Too many inquiries from this connection. Please call the workshop.",
+      });
+    const body = await readJson(request);
+    const inquiry = {
+      id: crypto.randomUUID(),
+      name: String(body.name || "").trim().slice(0, 100),
+      phone: String(body.phone || "").trim().slice(0, 40),
+      motorcycle: String(body.motorcycle || "").trim().slice(0, 120),
+      part: String(body.part || "").trim().slice(0, 120),
+      details: String(body.details || "").trim().slice(0, 1000),
+      status: "New",
+      createdAt: new Date().toISOString(),
+    };
+    if (
+      inquiry.name.length < 2 ||
+      inquiry.phone.length < 5 ||
+      inquiry.details.length < 5
+    )
+      return json(response, 400, {
+        error: "Enter your name, phone number and request details.",
+      });
+    await saveInquiry(inquiry);
+    return json(response, 201, {
+      inquiry: { id: inquiry.id, status: inquiry.status },
     });
   }
   if (url.pathname === "/api/health" && request.method === "GET") {
@@ -166,52 +421,42 @@ async function api(request, response, url) {
     return json(response, 200, { ok: true, database: "postgresql" });
   }
   if (url.pathname === "/api/workshop/state" && request.method === "GET") {
-    if (!pool) return json(response, 200, readLocalDatabase());
-    const result = await pool.query(
-      "SELECT state, version, updated_at FROM workshop_state WHERE id = 1",
-    );
-    return json(response, 200, result.rows[0] || { state: {}, version: 0 });
+    const user = currentUser(request);
+    if (!user)
+      return json(response, 401, { error: "Sign in to access workshop records." });
+    let database;
+    if (pool) {
+      const result = await pool.query(
+        "SELECT state, version, updated_at FROM workshop_state WHERE id = 1",
+      );
+      database = result.rows[0] || { state: {}, version: 0 };
+    } else {
+      database = readLocalDatabase();
+    }
+    if (user.role === "admin") {
+      const state = { ...(database.state || {}) };
+      for (const key of ownerOnlyStateKeys) delete state[key];
+      return json(response, 200, { ...database, state });
+    }
+    return json(response, 200, database);
   }
   if (url.pathname === "/api/workshop/state" && request.method === "PUT") {
+    const user = currentUser(request);
+    if (!user)
+      return json(response, 401, { error: "Sign in to update workshop records." });
+    if (!isSameOrigin(request))
+      return json(response, 403, { error: "State update origin was rejected" });
     const body = await readJson(request);
-    if (!body.key || body.value === undefined)
+    if (
+      typeof body.key !== "string" ||
+      !/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(body.key) ||
+      body.value === undefined
+    )
       return json(response, 400, { error: "key and value are required" });
-    if (!pool) {
-      const database = readLocalDatabase();
-      database.state[body.key] = body.value;
-      database.version += 1;
-      database.updated_at = new Date().toISOString();
-      database.audit.unshift({
-        key: body.key,
-        version: database.version,
-        changed_at: database.updated_at,
-      });
-      database.audit = database.audit.slice(0, 500);
-      writeLocalDatabase(database);
-      return json(response, 200, database);
-    }
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      const result = await client.query(
-        `INSERT INTO workshop_state (id, state, version)
-         VALUES (1, jsonb_build_object($1::text, $2::jsonb), 1)
-         ON CONFLICT (id) DO UPDATE SET state = jsonb_set(workshop_state.state, ARRAY[$1::text], $2::jsonb, true), version = workshop_state.version + 1, updated_at = NOW()
-         RETURNING state, version, updated_at`,
-        [body.key, JSON.stringify(body.value)],
-      );
-      await client.query(
-        "INSERT INTO workshop_state_audit (state_key, value, version) VALUES ($1, $2::jsonb, $3)",
-        [body.key, JSON.stringify(body.value), result.rows[0].version],
-      );
-      await client.query("COMMIT");
-      return json(response, 200, result.rows[0]);
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+    if (user.role !== "owner" && ownerOnlyStateKeys.has(body.key))
+      return json(response, 403, { error: "Owner access is required." });
+    const result = await saveStateKey(body.key, body.value);
+    return json(response, 200, result);
   }
   /* ---- eSewa signature verification ---- */
   function esewaVerify(transactionRef, amount, secretKey) {

@@ -1,6 +1,6 @@
 # Biswokarma Workshop
 
-The live website is the Render-backed Node.js application served by `server.js`. It keeps the existing React interface, workshop state API, PostgreSQL/local-file persistence, login roles, inventory, invoices, payments, and admin/owner tools. The original homepage mark uses a restrained CSS/SVG depth treatment and an abstract interlocking-parts backdrop; reduced-motion settings disable decorative animation.
+The Render-backed Node.js app serves `site.html` with the customer-facing motorcycle parts catalog, inquiry form, and separate Admin and Owner sign-in routes. The industrial, machined-surface visual treatment is CSS-only, works on narrow screens, and honors reduced-motion preferences.
 
 ## Run locally
 
@@ -9,29 +9,41 @@ npm install
 npm start
 ```
 
-Set `DATABASE_URL` to use PostgreSQL; without it, the server stores workshop state in a local JSON file. Render deployment continues to use `render.yaml` and `node server.js`.
+Set `DATABASE_URL` for PostgreSQL. Without it, the app stores workshop records in `workshop-state.json` (or the path set by `WORKSHOP_STATE_FILE`).
 
-## Live product pages
+## Configure Admin and Owner access
 
-The **Spare Parts** marketplace combines saved workshop inventory with 30 demo catalog records from `data/jcb-parts.json`. New installations start with an empty workshop inventory instead of generated sample stock; existing saved inventory is left intact. The catalog labels saved inventory separately from unverified demo references and reminds customers to confirm recorded details with the workshop. Its compact opening feature lets visitors select any of eight parts categories without scrolling through full-height chapters; category illustrations are clearly labeled as generated references, not exact product or OEM photos. Navigation is keyboard-accessible, mobile uses ordinary page scrolling, and reduced-motion preferences disable transitions. Catalog data is served by `GET /api/catalog/products`; demo records are sanitized before serving and contain no supplier price, stock, fitment or specifications. A subset has illustrative images mapped in `data/illustrative-jcb-parts.json`; the provenance and use limitation are recorded in `images/illustrative-jcb-parts/README.txt`. Saved inventory and inquiry records continue using the existing workshop-state API and persistence schema.
+Sign-in is server-side. The app does not ship with default users or passwords. Set all of these environment variables on Render before enabling dashboard use:
 
-Each item has a shareable `/products/<part-name>-<part-id>` detail route. Search covers names and workshop references; machine and category filters use only recorded listing data. Demo products offer quote requests rather than made-up prices. Saved workshop inventory can show its recorded price and stock, both of which should be confirmed with the workshop. The quote cart is stored in browser local storage and submits requested products through the existing inquiry persistence flow. It does not reserve stock or create a payment.
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD_HASH`
+- `OWNER_USERNAME`
+- `OWNER_PASSWORD_HASH`
+- `SESSION_SECRET` (at least 32 bytes)
 
-The source JSON retains unverified demo seed data for maintenance, but the public catalog endpoint replaces its estimates and fitment/specification claims with quote-only records. Supplier brands and availability are not verified. Seventeen generated catalog illustrations are also shown for saved inventory only when the pictured component clearly matches an exact product name; the approved `(Batch N)` suffix is ignored, and all other records remain image-less. Every illustration is labeled as a reference, not the exact product or an OEM photo, and does not verify any product claim. No real supplier/OEM product photos are available. No independent license is asserted for the illustrations. Any verified product photo added later must include an HTTPS image URL, source page, source name, attribution and an approved reuse license (`CC0`, `CC BY 4.0`, `CC BY-SA 4.0`, `PUBLIC DOMAIN` or documented `SUPPLIER PERMISSION`) before it can render as a product photo.
+Generate a password hash locally with Node.js; do not commit it or send it in chat:
 
-The admin/owner role and active dashboard tab survive reload in the current browser tab using non-secret metadata in `sessionStorage`; logout clears it. Passwords are not written to this session metadata. This remains client-side UI state, not server-enforced authentication. Secure server-side authorization would require adding a backend login/session mechanism.
+```bash
+node -e 'const c=require("crypto"),s=c.randomBytes(16);console.log("scrypt$"+s.toString("hex")+"$"+c.scryptSync(process.argv[1],s,64).toString("hex"))' "YOUR_STRONG_PASSWORD"
+```
 
-## VAT invoices
+Use a different long password for each role. Generate a session secret with:
 
-Inventory and custom line prices are VAT-inclusive. New invoices keep the entered gross amount as the total, calculate the taxable amount as `total / 1.13`, and show the included 13% VAT separately. Existing invoices remain unchanged.
+```bash
+node -e 'console.log(require("crypto").randomBytes(48).toString("base64url"))'
+```
 
-## Optional sample-page generator
+The browser receives only an eight-hour, signed, `HttpOnly`, `SameSite=Strict` session cookie. Workshop state requires an authenticated session; Owner-only financial state is filtered from Admin responses and writes. Public inquiries are validated, rate-limited, and saved to the existing workshop-state database.
 
-`scripts/generate.js` is retained for generating the two sample records in `data/products.json` under `dist/products/`. It is separate from the live inventory and is not the Render website entry point.
+## Parts catalog
 
-## Checks
+The public catalog contains generic motorcycle part references, not JCB listings. Reference IDs are not OEM part numbers. Catalog entries do not claim a brand, fitment, specification, stock or price; the inquiry flow asks the workshop to confirm those details. Public inquiry records are retained in the shared workshop state.
+
+## Verification
 
 ```bash
 npm run check
 npm test
 ```
+
+The sample-page generator under `scripts/generate.js` is separate from the Render website.

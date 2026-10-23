@@ -3,89 +3,37 @@ const path = require("node:path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-test("embedded React application script is valid JavaScript", () => {
-  const html = fs.readFileSync(
-    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
-    "utf8",
-  );
-  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
-  assert.ok(scripts.length > 0, "expected an inline application script");
-  assert.doesNotThrow(() => new Function(scripts[scripts.length - 1][1]));
+const html = fs.readFileSync(path.join(__dirname, "..", "site.html"), "utf8");
+const siteScript = fs.readFileSync(
+  path.join(__dirname, "..", "vendor", "site.js"),
+  "utf8",
+);
+
+test("serves the workshop public site with its accessible responsive app shell", () => {
+  assert.match(html, /Biswokarma Workshop \| Motorcycle Parts & Service/);
+  assert.match(html, /name="viewport".*width=device-width/s);
+  assert.match(html, /class="skip-link" href="#main-content"/);
+  assert.match(html, /prefers-reduced-motion: reduce/);
+  assert.match(html, /max-width: 560px/);
+  assert.match(html, /repeating-linear-gradient/);
+  assert.match(html, /shadow-inset/);
+  assert.match(html, /\/vendor\/site\.js\?v=20261023-motorcycle-workshop/);
 });
 
-test("catalog script URL is versioned for cache invalidation", () => {
-  const html = fs.readFileSync(
-    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
-    "utf8",
-  );
-  assert.ok(
-    html.includes(
-      '<script src="/vendor/catalog.js?v=20260928-inventory-images"></script>',
-    ),
-  );
+test("public pages include motorcycle references, fitment inquiries and separate role logins", () => {
+  assert.match(siteScript, /Spare parts/);
+  assert.match(siteScript, /Ask the workshop/);
+  assert.match(siteScript, /Admin login/);
+  assert.match(siteScript, /Owner login/);
+  assert.match(siteScript, /confirm the right fit, current availability and price/);
+  assert.match(siteScript, /No customer inquiries have been received yet/);
+  assert.doesNotMatch(siteScript, /JCB/i);
 });
 
-test("admin and owner dashboard session state is restored without persisting credentials", () => {
-  const html = fs.readFileSync(
-    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
-    "utf8",
-  );
-  assert.ok(html.includes('<script src="/vendor/session.js"></script>'));
-  assert.ok(html.includes("Session.loadUser(sessionStorage, localStorage)"));
-  assert.ok(html.includes("Session.loadDashboardLocation(sessionStorage)"));
-  assert.ok(html.includes("Session.saveUser(sessionStorage, sessionUser)"));
-  assert.match(
-    html,
-    /Session\.saveDashboardLocation\(\s*sessionStorage,\s*nextTab,\s*nextInvoiceId,/,
-  );
-  assert.ok(html.includes("String(bill.id) === activeInvoiceId"));
-  assert.ok(html.includes("Session.clear(sessionStorage)"));
-  assert.ok(!html.includes('localStorage.setItem("bw_currentUser"'));
-});
-
-test("homepage uses the original connected-parts motif and motion-safe brand mark", () => {
-  const html = fs.readFileSync(
-    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
-    "utf8",
-  );
-  assert.ok(html.includes('className: "heroConnections"'));
-  assert.ok(html.includes(".connectionGearLarge"));
-  assert.ok(html.includes("@keyframes brand-emblem-depth"));
-  assert.ok(html.includes("@keyframes brand-mark-depth"));
-  assert.ok(html.includes("prefers-reduced-motion: reduce"));
-});
-
-test("catalog item links open their own product detail route", () => {
-  const html = fs.readFileSync(
-    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
-    "utf8",
-  );
-  assert.ok(html.includes('href: `/products/${Catalog.productSlug(product)}`'));
-  assert.ok(html.includes("window.history.pushState(null, \"\", `/products/${slug}`)"));
-  assert.ok(html.includes('view === "product"'));
-});
-
-test("catalog browsing separates listing sources and adapts filters for mobile", () => {
-  const html = fs.readFileSync(
-    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
-    "utf8",
-  );
-  assert.ok(html.includes('"Listing source"'));
-  assert.ok(html.includes('"Saved workshop inventory"'));
-  assert.ok(html.includes('"Unverified demo references"'));
-  assert.ok(html.includes("Catalog.listingSourceLabel(product)"));
-  assert.ok(html.includes(".demoSource"));
-  assert.ok(html.includes(".inventorySource"));
-  assert.ok(html.includes("@media (max-width: 380px)"));
-});
-
-test("saved inventory illustrations are derived for display without changing stored parts", () => {
-  const html = fs.readFileSync(
-    path.join(__dirname, "..", "biswokarma-workshop (1).html"),
-    "utf8",
-  );
-  assert.ok(html.includes("Catalog.findInventoryIllustration(part, inventoryIllustrations)"));
-  assert.ok(html.includes("Catalog.inventoryListing("));
-  assert.ok(html.includes('className: "productPhotography"'));
-  assert.ok(html.includes("image.caption ||"));
+test("public site uses server sessions and inquiry storage instead of browser-stored credentials", () => {
+  assert.match(siteScript, /\/api\/auth\/login/);
+  assert.match(siteScript, /\/api\/auth\/me/);
+  assert.match(siteScript, /\/api\/auth\/logout/);
+  assert.match(siteScript, /\/api\/inquiries/);
+  assert.doesNotMatch(siteScript, /localStorage.*password/i);
 });
