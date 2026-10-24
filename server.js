@@ -16,6 +16,7 @@ const vendorDirectory = path.join(__dirname, "vendor");
 const imagesDirectory = path.join(__dirname, "images");
 const motorcycleProductCatalog = require("./data/motorcycle-parts.json");
 const { catalogListing } = require("./vendor/catalog");
+const { createInvoice } = require("./vendor/invoices");
 const {
   createSessionToken,
   credentialConfiguration,
@@ -24,7 +25,14 @@ const {
 } = require("./vendor/auth");
 const loginAttempts = new Map();
 const inquiryAttempts = new Map();
-const ownerOnlyStateKeys = new Set(["bills", "purchases", "settings"]);
+const ownerOnlyStateKeys = new Set(["purchases", "settings"]);
+const adminOnlyWriteStateKeys = new Set(["bills", "orders"]);
+const defaultPublicSettings = {
+  email: "biswokarmaworkshop@gmail.com",
+  phonePrimary: "9866389738",
+  phoneSecondary: "9806567713",
+  address: "Khol Khole, Gorkha 8, Gandaki Province, Nepal",
+};
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -159,6 +167,30 @@ function clearSessionCookie(response) {
   );
 }
 
+function publicSettings(settings = {}) {
+  const candidate = settings && typeof settings === "object" && !Array.isArray(settings)
+    ? settings
+    : {};
+  const email = String(candidate.email || defaultPublicSettings.email).trim();
+  const phonePrimary = String(candidate.phonePrimary || defaultPublicSettings.phonePrimary).trim();
+  const phoneSecondary = String(candidate.phoneSecondary || defaultPublicSettings.phoneSecondary).trim();
+  const address = String(candidate.address || defaultPublicSettings.address).trim();
+  return {
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254
+      ? email
+      : defaultPublicSettings.email,
+    phonePrimary: /^[+0-9 ()-]{7,24}$/.test(phonePrimary)
+      ? phonePrimary
+      : defaultPublicSettings.phonePrimary,
+    phoneSecondary: /^[+0-9 ()-]{7,24}$/.test(phoneSecondary)
+      ? phoneSecondary
+      : defaultPublicSettings.phoneSecondary,
+    address: address.length > 0 && address.length <= 180
+      ? address
+      : defaultPublicSettings.address,
+  };
+}
+
 function readJson(request) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -277,6 +309,54 @@ async function saveInquiry(inquiry) {
   }
 }
 
+async function recordInvoice(body) {
+  if (!pool) {
+    const database = readLocalDatabase();
+    const result = createInvoice(database.state, body);
+    database.version += 1;
+    database.updated_at = new Date().toISOString();
+    for (const key of ["parts", "bills", "orders", "customers"]) {
+      database.audit.unshift({
+        key,
+        version: database.version,
+        changed_at: database.updated_at,
+      });
+    }
+    database.audit = database.audit.slice(0, 500);
+    writeLocalDatabase(database);
+    return result;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      "INSERT INTO workshop_state (id, state, version) VALUES (1, '{}'::jsonb, 1) ON CONFLICT (id) DO NOTHING",
+    );
+    const current = await client.query(
+      "SELECT state, version FROM workshop_state WHERE id = 1 FOR UPDATE",
+    );
+    const state = current.rows[0].state || {};
+    const result = createInvoice(state, body);
+    const updated = await client.query(
+      "UPDATE workshop_state SET state = $1::jsonb, version = version + 1, updated_at = NOW() WHERE id = 1 RETURNING version",
+      [JSON.stringify(state)],
+    );
+    for (const key of ["parts", "bills", "orders", "customers"]) {
+      await client.query(
+        "INSERT INTO workshop_state_audit (state_key, value, version) VALUES ($1, $2::jsonb, $3)",
+        [key, JSON.stringify(state[key]), updated.rows[0].version],
+      );
+    }
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 const gatewayConfig = {
   esewa: Boolean(
     process.env.ESEWA_MERCHANT_CODE && process.env.ESEWA_SECRET_KEY,
@@ -303,6 +383,17 @@ function verifyWebhook(body, request) {
 }
 
 async function api(request, response, url) {
+  if (url.pathname === "/api/public/settings" && request.method === "GET") {
+    let settings = {};
+    if (pool) {
+      const result = await pool.query("SELECT state->'settings' AS settings FROM workshop_state WHERE id = 1");
+      settings = result.rows[0]?.settings || {};
+    } else {
+      settings = readLocalDatabase().state.settings || {};
+    }
+    response.setHeader("Cache-Control", "public, max-age=60");
+    return json(response, 200, publicSettings(settings));
+  }
   if (url.pathname === "/api/auth/status" && request.method === "GET") {
     const configuration = credentialConfiguration(process.env);
     return json(response, 200, {
@@ -336,7 +427,7 @@ async function api(request, response, url) {
       return json(response, 400, {
         error: "Choose an account type and enter your username and password.",
       });
-    if (!rateLimit(loginAttempts, request, `login:${role}:${username.toLowerCase()}`, 8, 15 * 60 * 1000))
+    if (!rateLimit(loginAttempts, request, "login", 5, 15 * 60 * 1000))
       return json(response, 429, {
         error: "Too many sign-in attempts. Wait 15 minutes and try again.",
       });
@@ -352,9 +443,7 @@ async function api(request, response, url) {
       return json(response, 401, {
         error: `The ${role} username or password is incorrect.`,
       });
-    loginAttempts.delete(
-      `${String(request.socket.remoteAddress || "unknown")}:login:${role}:${username.toLowerCase()}`,
-    );
+    loginAttempts.delete(`${String(request.socket.remoteAddress || "unknown")}:login`);
     const token = createSessionToken(
       { username: account.username, role },
       configuration.sessionSecret,
@@ -378,7 +467,11 @@ async function api(request, response, url) {
       ),
     });
   }
-  if (url.pathname === "/api/inquiries" && request.method === "POST") {
+  if (
+    (url.pathname === "/api/inquiries" ||
+      url.pathname === "/api/service-requests") &&
+    request.method === "POST"
+  ) {
     if (!isSameOrigin(request))
       return json(response, 403, { error: "Inquiry request origin was rejected" });
     if (!rateLimit(inquiryAttempts, request, "inquiry", 5, 15 * 60 * 1000))
@@ -386,13 +479,17 @@ async function api(request, response, url) {
         error: "Too many inquiries from this connection. Please call the workshop.",
       });
     const body = await readJson(request);
+    const serviceRequest = url.pathname === "/api/service-requests";
     const inquiry = {
       id: crypto.randomUUID(),
+      kind: serviceRequest ? "vehicle-service" : "general",
       name: String(body.name || "").trim().slice(0, 100),
       phone: String(body.phone || "").trim().slice(0, 40),
       motorcycle: String(body.motorcycle || "").trim().slice(0, 120),
       part: String(body.part || "").trim().slice(0, 120),
       details: String(body.details || "").trim().slice(0, 1000),
+      serviceLocation: String(body.serviceLocation || "").trim().slice(0, 240),
+      coverageConfirmed: body.coverageConfirmed === true,
       status: "New",
       createdAt: new Date().toISOString(),
     };
@@ -404,10 +501,37 @@ async function api(request, response, url) {
       return json(response, 400, {
         error: "Enter your name, phone number and request details.",
       });
+    if (
+      serviceRequest &&
+      (!inquiry.motorcycle ||
+        !inquiry.part ||
+        !inquiry.serviceLocation ||
+        !inquiry.coverageConfirmed)
+    )
+      return json(response, 400, {
+        error: "Enter the vehicle, service, and location, and confirm the approximate 24 km service area.",
+      });
     await saveInquiry(inquiry);
     return json(response, 201, {
       inquiry: { id: inquiry.id, status: inquiry.status },
     });
+  }
+  if (url.pathname === "/api/workshop/invoices" && request.method === "POST") {
+    const user = currentUser(request);
+    if (!user)
+      return json(response, 401, { error: "Sign in to create an invoice." });
+    if (user.role !== "admin")
+      return json(response, 403, { error: "Admin access is required to create invoices." });
+    if (!isSameOrigin(request))
+      return json(response, 403, { error: "Invoice request origin was rejected." });
+    const body = await readJson(request);
+    try {
+      return json(response, 201, await recordInvoice(body));
+    } catch (error) {
+      if (error instanceof TypeError || error instanceof RangeError)
+        return json(response, 400, { error: error.message });
+      throw error;
+    }
   }
   if (url.pathname === "/api/health" && request.method === "GET") {
     if (!pool)
@@ -455,6 +579,8 @@ async function api(request, response, url) {
       return json(response, 400, { error: "key and value are required" });
     if (user.role !== "owner" && ownerOnlyStateKeys.has(body.key))
       return json(response, 403, { error: "Owner access is required." });
+    if (user.role !== "admin" && adminOnlyWriteStateKeys.has(body.key))
+      return json(response, 403, { error: "Admin access is required." });
     const result = await saveStateKey(body.key, body.value);
     return json(response, 200, result);
   }
